@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cam-Set Pro | 카메라 세팅 관리 (v0.01)</title>
+    <title>Cam-Set Pro | 카메라 세팅 관리 (v0.02)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pica/9.0.1/pica.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -34,9 +34,10 @@
 
         <!-- Header -->
         <header class="flex flex-wrap justify-between items-center mb-8 gap-4">
-            <h1 class="text-3xl font-bold text-white">Cam-Set Pro v0.01</h1>
+            <h1 class="text-3xl font-bold text-white">Cam-Set Pro v0.02</h1>
             <div>
-                <button id="compareBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 disabled:bg-gray-500 disabled:cursor-not-allowed" disabled>비교하기</button>
+                <button id="settingsBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300">설정</button>
+                <button id="compareBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 disabled:bg-gray-500 disabled:cursor-not-allowed ml-2" disabled>비교하기</button>
                 <button id="newTestBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 ml-2">새 테스트 추가</button>
             </div>
         </header>
@@ -56,7 +57,7 @@
                 </div>
                  <div id="no-data" class="text-center py-16 hidden">
                     <p class="text-xl text-gray-400">저장된 테스트 데이터가 없습니다.</p>
-                    <p class="text-gray-500 mt-2">`comtest/cam-set-pro-data` 저장소에 `manifest.json` 파일이 있는지 확인해주세요.</p>
+                    <p class="text-gray-500 mt-2">`manifest.json` 파일이 없거나 GitHub 연동 설정이 필요합니다.</p>
                 </div>
             </div>
 
@@ -132,6 +133,25 @@
         </div>
     </div>
     
+    <!-- Modal for GitHub Settings -->
+    <div id="githubSettingsModal" class="fixed inset-0 z-50 flex items-center justify-center modal-bg hidden">
+        <div class="bg-gray-800 rounded-lg shadow-2xl p-8 w-full max-w-lg">
+            <h3 class="text-2xl font-bold text-white mb-4">GitHub 연동 설정</h3>
+            <p class="text-gray-400 text-sm mb-6">데이터 자동 업로드를 위해 GitHub 정보를 입력해주세요. 이 정보는 브라우저에만 저장됩니다.</p>
+            <form id="githubSettingsForm" class="space-y-4">
+                <input type="text" id="githubUser" placeholder="GitHub 사용자 이름" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                <input type="text" id="githubRepo" placeholder="저장소 이름 (예: cam-set-pro-data)" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                <input type="password" id="githubToken" placeholder="Personal Access Token (repo 권한 필요)" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                <p class="text-xs text-gray-500">토큰은 페이지를 떠나면 사라집니다. 보안을 위해 페이지를 열 때마다 입력해주세요.</p>
+                 <a href="https://github.com/settings/tokens/new?scopes=repo" target="_blank" class="text-blue-400 hover:underline text-sm">새 Personal Access Token 만들기</a>
+                <div class="flex justify-end space-x-4 pt-4">
+                    <button type="button" id="cancelSettingsBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">취소</button>
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">설정 저장</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Modal for Original Image View -->
     <div id="originalImageViewModal" class="fixed inset-0 z-50 flex items-center justify-center modal-bg hidden" onclick="this.classList.add('hidden')">
         <img id="originalImageContent" src="" alt="Original Image" class="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl">
@@ -149,6 +169,8 @@
                     cancel: document.getElementById('cancelBtn'),
                     save: document.getElementById('saveBtn'),
                     backToDashboard: document.getElementById('backToDashboardBtn'),
+                    settings: document.getElementById('settingsBtn'),
+                    cancelSettings: document.getElementById('cancelSettingsBtn'),
                     closeStatusModal: document.getElementById('closeStatusModalBtn'),
                 },
                 containers: { gallery: document.getElementById('gallery'), comparisonGrid: document.getElementById('comparisonGrid'), loading: document.getElementById('loading'), noData: document.getElementById('no-data') },
@@ -166,6 +188,8 @@
                     statusTitle: document.getElementById('statusTitle'),
                     statusMessage: document.getElementById('statusMessage'),
                     statusLoader: document.getElementById('statusLoader'),
+                    githubSettings: document.getElementById('githubSettingsModal'),
+                    githubSettingsForm: document.getElementById('githubSettingsForm'),
                     originalImage: document.getElementById('originalImageViewModal'),
                     originalImageContent: document.getElementById('originalImageContent'),
                 },
@@ -180,11 +204,7 @@
                 comparisonList: new Set(),
                 resizedImageBlob: null,
                 originalImageFile: null,
-                githubConfig: { 
-                    user: 'comtest', 
-                    repo: 'cam-set-pro-data', 
-                    token: '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' 
-                }
+                githubConfig: { user: '', repo: '', token: '' }
             };
 
             const picaInstance = pica();
@@ -255,19 +275,21 @@
                             }
                             state.allData = allData;
                             return;
+                        } else {
+                             // If manifest is not found, it might be a new repo.
+                             state.manifest = { files: ['db_1.json'] };
+                             state.allData = [];
                         }
                     } catch (error) {
                          console.error("Could not load data from GitHub.", error);
                          app.containers.noData.innerHTML = `<p class="text-xl text-red-400">데이터 로딩 실패!</p><p class="text-gray-500 mt-2">GitHub 저장소 정보 또는 토큰이 유효한지 확인해주세요. 오류: ${error.message}</p>`;
                          app.containers.noData.classList.remove('hidden');
-                         return; // Stop execution if GitHub fetch fails
+                         throw error;
                     }
+                } else {
+                    app.containers.noData.innerHTML = `<p class="text-xl text-gray-400">GitHub 연동이 필요합니다.</p><p class="text-gray-500 mt-2">'설정' 버튼을 눌러 GitHub 정보를 입력해주세요.</p>`;
+                    app.containers.noData.classList.remove('hidden');
                 }
-                
-                // This part will only be reached if GitHub config is not set, 
-                // which is not possible in this hardcoded version but kept for robustness.
-                state.manifest = { files: ['db_1.json'] };
-                state.allData = [];
             }
 
             async function init() {
@@ -275,12 +297,21 @@
                 app.containers.gallery.innerHTML = '';
                 app.containers.noData.classList.add('hidden');
                 
-                await loadDataFromSource();
-                
-                renderDashboard();
-                app.containers.loading.classList.add('hidden');
-                if(state.allData.length === 0 && !app.containers.noData.textContent.includes('실패')) {
-                    app.containers.noData.classList.remove('hidden');
+                const savedConfig = JSON.parse(localStorage.getItem('camSetProGithubConfig') || '{}');
+                state.githubConfig.user = savedConfig.user || '';
+                state.githubConfig.repo = savedConfig.repo || '';
+                // Token is not persisted for security.
+
+                try {
+                    await loadDataFromSource();
+                    renderDashboard();
+                } catch(e) {
+                    // Error is already displayed by loadDataFromSource
+                } finally {
+                    app.containers.loading.classList.add('hidden');
+                    if(state.allData.length === 0 && !app.containers.noData.textContent.includes('실패') && !app.containers.noData.textContent.includes('연동')) {
+                        app.containers.noData.classList.remove('hidden');
+                    }
                 }
             }
 
@@ -387,6 +418,11 @@
                 e.preventDefault();
                 if (!state.originalImageFile) {
                     alert('결과물 이미지를 업로드해주세요.');
+                    return;
+                }
+                if (!state.githubConfig.token) {
+                    alert('GitHub 연동 설정을 먼저 완료해주세요.');
+                    app.modal.githubSettings.classList.remove('hidden');
                     return;
                 }
 
@@ -531,6 +567,25 @@
                 state.resizedImageBlob = null; state.originalImageFile = null;
                 switchView('form');
             });
+
+            app.buttons.settings.addEventListener('click', () => {
+                document.getElementById('githubUser').value = state.githubConfig.user;
+                document.getElementById('githubRepo').value = state.githubConfig.repo;
+                document.getElementById('githubToken').value = state.githubConfig.token;
+                app.modal.githubSettings.classList.remove('hidden');
+            });
+
+            app.modal.githubSettingsForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                state.githubConfig.user = document.getElementById('githubUser').value;
+                state.githubConfig.repo = document.getElementById('githubRepo').value;
+                state.githubConfig.token = document.getElementById('githubToken').value;
+                localStorage.setItem('camSetProGithubConfig', JSON.stringify({ user: state.githubConfig.user, repo: state.githubConfig.repo }));
+                app.modal.githubSettings.classList.add('hidden');
+                init();
+            });
+            
+            app.buttons.cancelSettings.addEventListener('click', () => app.modal.githubSettings.classList.add('hidden'));
             
             app.buttons.cancel.addEventListener('click', () => switchView('dashboard'));
             app.buttons.backToDashboard.addEventListener('click', () => switchView('dashboard'));
