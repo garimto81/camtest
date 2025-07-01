@@ -34,5 +34,23 @@
     "ndFilter": "",
     "image_original": "assets/originals/test-1751357459671.png",
     "image_viewer": "assets/view/test-1751357459671.jpg"
+  },
+  {
+    "id": "test-1751357482208",
+    "date": "2025-07-01",
+    "title": "xptmxm02",
+    "director": "",
+    "sceneDesc": "",
+    "cameraModel": "",
+    "lens": "",
+    "iso": "",
+    "aperture": "",
+    "shutterSpeed": "",
+    "whiteBalance": "",
+    "pictureProfile": "",
+    "focusDistance": "",
+    "ndFilter": "",
+    "image_original": "assets/originals/test-1751357482208.png",
+    "image_viewer": "assets/originals/test-1751357482208.png"
   }
 ]
