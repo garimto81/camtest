@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cam-Set Pro | 카메라 세팅 관리 (v0.08)</title>
+    <title>Cam-Set Pro | 카메라 세팅 관리 (v0.10 - Firebase)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pica/9.0.1/pica.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -25,38 +25,20 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        /* Debugger Styles */
-        #debugContainer {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background-color: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(5px);
-            border-top: 1px solid #4a5568;
-            z-index: 100;
-        }
-        #logWindow {
-            max-height: 200px;
-            overflow-y: auto;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 0.8rem;
-        }
-        .log-info { color: #e2e8f0; }
-        .log-success { color: #48bb78; }
-        .log-error { color: #f56565; }
-        .log-warn { color: #ecc94b; }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-200">
 
     <!-- App Container -->
-    <div id="app" class="container mx-auto p-4 md:p-8 mb-64">
+    <div id="app" class="container mx-auto p-4 md:p-8">
 
         <!-- Header -->
         <header class="flex flex-wrap justify-between items-center mb-8 gap-4">
-            <h1 class="text-3xl font-bold text-white">Cam-Set Pro v0.08</h1>
-            <div>
+            <h1 class="text-3xl font-bold text-white">Cam-Set Pro v0.10</h1>
+            <div class="flex items-center">
+                <div id="auth-container" class="text-right mr-4">
+                    <!-- Auth status will be injected here -->
+                </div>
                 <button id="compareBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 disabled:bg-gray-500 disabled:cursor-not-allowed" disabled>비교하기</button>
                 <button id="newTestBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 ml-2">새 테스트 추가</button>
             </div>
@@ -77,15 +59,14 @@
                 </div>
                  <div id="no-data" class="text-center py-16 hidden">
                     <p class="text-xl text-gray-400">저장된 테스트 데이터가 없습니다.</p>
-                    <p class="text-gray-500 mt-2">`garimto81/camtest` 저장소에 `manifest.json` 파일이 있는지 확인해주세요.</p>
+                    <p class="text-gray-500 mt-2">'새 테스트 추가' 버튼을 눌러 첫 데이터를 저장해보세요.</p>
                 </div>
             </div>
 
-            <!-- Form View -->
+            <!-- Form View (No changes to the form fields) -->
             <div id="formView" class="hidden">
-                <h2 id="formTitle" class="text-2xl font-semibold mb-6">새 테스트 데이터 입력</h2>
+                 <h2 id="formTitle" class="text-2xl font-semibold mb-6">새 테스트 데이터 입력</h2>
                 <form id="testForm" class="bg-gray-800 p-8 rounded-lg shadow-xl space-y-6">
-                    <!-- Form fields... -->
                     <fieldset class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <legend class="text-lg font-medium text-white mb-2">기본 정보</legend>
                         <input type="hidden" id="entryId">
@@ -135,26 +116,22 @@
         </main>
     </div>
 
-    <!-- Modal for Upload/Delete Status -->
+    <!-- Modals -->
     <div id="statusModal" class="fixed inset-0 z-50 flex items-center justify-center modal-bg hidden">
         <div class="bg-gray-800 rounded-lg shadow-2xl p-8 w-full max-w-md text-center">
             <div id="statusLoader" class="flex justify-center mb-4"><div class="loader"></div></div>
-            <h3 id="statusTitle" class="text-2xl font-bold text-white mb-4">업로드 중...</h3>
+            <h3 id="statusTitle" class="text-2xl font-bold text-white mb-4">처리 중...</h3>
             <p id="statusMessage" class="text-gray-300"></p>
             <button id="closeStatusModalBtn" class="mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition duration-300 hidden">완료</button>
         </div>
     </div>
-    
-    <!-- Modal for Original Image View -->
     <div id="originalImageViewModal" class="fixed inset-0 z-50 flex items-center justify-center modal-bg hidden" onclick="this.classList.add('hidden')">
         <img id="originalImageContent" src="" alt="Original Image" class="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl">
     </div>
-
-    <!-- Modal for Delete Confirmation -->
     <div id="deleteConfirmModal" class="fixed inset-0 z-50 flex items-center justify-center modal-bg hidden">
         <div class="bg-gray-800 rounded-lg shadow-2xl p-8 w-full max-w-md">
             <h3 class="text-2xl font-bold text-red-500 mb-4">삭제 확인</h3>
-            <p id="deleteConfirmMessage" class="text-gray-300 mb-6">이 항목을 정말 삭제하시겠습니까? 관련된 모든 데이터와 이미지가 GitHub에서 영구적으로 삭제되며, 되돌릴 수 없습니다.</p>
+            <p id="deleteConfirmMessage" class="text-gray-300 mb-6"></p>
             <div class="flex justify-end space-x-4">
                 <button id="cancelDeleteBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">취소</button>
                 <button id="confirmDeleteBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg">삭제</button>
@@ -162,644 +139,449 @@
         </div>
     </div>
 
-    <!-- Debugger UI -->
-    <div id="debugContainer" class="hidden">
-        <div class="p-2 flex justify-between items-center bg-gray-900">
-            <h3 class="text-lg font-bold text-yellow-400">디버그 로그</h3>
-            <div class="flex items-center">
-                <span class="text-sm mr-2">디버그 모드</span>
-                <label for="debugToggle" class="flex items-center cursor-pointer">
-                    <div class="relative">
-                        <input type="checkbox" id="debugToggle" class="sr-only">
-                        <div class="block bg-gray-600 w-10 h-6 rounded-full"></div>
-                        <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition"></div>
-                    </div>
-                </label>
-            </div>
-        </div>
-        <div id="logWindow" class="p-2"></div>
-    </div>
-    <div id="debug-toggle-handle" class="fixed bottom-4 right-4 bg-yellow-500 text-black w-12 h-12 rounded-full flex items-center justify-center cursor-pointer z-[101] shadow-lg">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 16v-2m8-6h2M4 12H2m15.364 6.364l1.414 1.414M4.222 4.222l1.414 1.414M18.364 4.222l-1.414 1.414M5.636 18.364l-1.414 1.414M12 16a4 4 0 100-8 4 4 0 000 8z" /></svg>
-    </div>
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Firebase SDKs
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signInAnonymously, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-storage.js";
 
+        // =================================================================================
+        // TODO: 여기에 자신의 Firebase 프로젝트의 설정을 붙여넣으세요.
+        // Firebase 콘솔 -> 프로젝트 설정 -> 내 앱 -> SDK 설정 및 구성에서 찾을 수 있습니다.
+        const firebaseConfig = {
+            apiKey: "AIzaSyCGL7epqiL0Qg_-Rva6oFmRkl8r5Wri_wQ",
+            authDomain: "camtest-6267c.firebaseapp.com",
+            projectId: "camtest-6267c",
+            storageBucket: "camtest-6267c.firebasestorage.app",
+            messagingSenderId: "348691096048",
+            appId: "1:348691096048:web:ac20cffd88f4dae837bd35"
+        };
+        // =================================================================================
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // --- DOM Elements ---
-            const app = {
-                views: { dashboard: document.getElementById('dashboardView'), form: document.getElementById('formView'), comparison: document.getElementById('comparisonView') },
-                buttons: {
-                    newTest: document.getElementById('newTestBtn'),
-                    compare: document.getElementById('compareBtn'),
-                    cancel: document.getElementById('cancelBtn'),
-                    save: document.getElementById('saveBtn'),
-                    backToDashboard: document.getElementById('backToDashboardBtn'),
-                    closeStatusModal: document.getElementById('closeStatusModalBtn'),
-                    cancelDelete: document.getElementById('cancelDeleteBtn'),
-                    confirmDelete: document.getElementById('confirmDeleteBtn'),
-                },
-                containers: { gallery: document.getElementById('gallery'), comparisonGrid: document.getElementById('comparisonGrid'), loading: document.getElementById('loading'), noData: document.getElementById('no-data') },
-                form: {
-                    formElement: document.getElementById('testForm'),
-                    title: document.getElementById('formTitle'),
-                    entryId: document.getElementById('entryId'),
-                    imageUpload: document.getElementById('imageUpload'),
-                    imagePreviewContainer: document.getElementById('imagePreviewContainer'),
-                    previewTitle: document.getElementById('previewTitle'),
-                    previewImage: document.getElementById('previewImage'),
-                },
-                modal: {
-                    status: document.getElementById('statusModal'),
-                    statusTitle: document.getElementById('statusTitle'),
-                    statusMessage: document.getElementById('statusMessage'),
-                    statusLoader: document.getElementById('statusLoader'),
-                    originalImage: document.getElementById('originalImageViewModal'),
-                    originalImageContent: document.getElementById('originalImageContent'),
-                    deleteConfirm: document.getElementById('deleteConfirmModal'),
-                    deleteConfirmMessage: document.getElementById('deleteConfirmMessage'),
-                },
-                debug: {
-                    toggleHandle: document.getElementById('debug-toggle-handle'),
-                    container: document.getElementById('debugContainer'),
-                    toggle: document.getElementById('debugToggle'),
-                    logWindow: document.getElementById('logWindow'),
-                },
-                inputs: { search: document.getElementById('searchInput') }
-            };
+        // Initialize Firebase
+        const fbApp = initializeApp(firebaseConfig);
+        const auth = getAuth(fbApp);
+        const db = getFirestore(fbApp);
+        const storage = getStorage(fbApp);
 
-            // --- State ---
-            let state = {
-                allData: [],
-                dbFileContents: {},
-                manifest: null,
-                comparisonList: new Set(),
-                resizedImageBlob: null,
-                originalImageFile: null,
-                githubConfig: { 
-                    user: 'garimto81', 
-                    repo: 'camtest', 
-                    token: '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' 
-                },
-                debugMode: false,
-                itemToDelete: null,
-            };
+        // --- DOM Elements ---
+        const app = {
+            views: { dashboard: document.getElementById('dashboardView'), form: document.getElementById('formView'), comparison: document.getElementById('comparisonView') },
+            buttons: {
+                newTest: document.getElementById('newTestBtn'),
+                compare: document.getElementById('compareBtn'),
+                cancel: document.getElementById('cancelBtn'),
+                save: document.getElementById('saveBtn'),
+                backToDashboard: document.getElementById('backToDashboardBtn'),
+                closeStatusModal: document.getElementById('closeStatusModalBtn'),
+                cancelDelete: document.getElementById('cancelDeleteBtn'),
+                confirmDelete: document.getElementById('confirmDeleteBtn'),
+            },
+            containers: {
+                gallery: document.getElementById('gallery'),
+                comparisonGrid: document.getElementById('comparisonGrid'),
+                loading: document.getElementById('loading'),
+                noData: document.getElementById('no-data'),
+                auth: document.getElementById('auth-container'),
+            },
+            form: {
+                formElement: document.getElementById('testForm'),
+                title: document.getElementById('formTitle'),
+                entryId: document.getElementById('entryId'),
+                imageUpload: document.getElementById('imageUpload'),
+                imagePreviewContainer: document.getElementById('imagePreviewContainer'),
+                previewTitle: document.getElementById('previewTitle'),
+                previewImage: document.getElementById('previewImage'),
+            },
+            modal: {
+                status: document.getElementById('statusModal'),
+                statusTitle: document.getElementById('statusTitle'),
+                statusMessage: document.getElementById('statusMessage'),
+                statusLoader: document.getElementById('statusLoader'),
+                originalImage: document.getElementById('originalImageViewModal'),
+                originalImageContent: document.getElementById('originalImageContent'),
+                deleteConfirm: document.getElementById('deleteConfirmModal'),
+                deleteConfirmMessage: document.getElementById('deleteConfirmMessage'),
+            },
+            inputs: { search: document.getElementById('searchInput') }
+        };
 
-            const picaInstance = pica();
-            const MAX_IMAGE_WIDTH = 1280;
-            const IMAGE_SIZE_LIMIT = 1024 * 1024; // 1MB
-            const DB_FILE_SIZE_LIMIT = 900 * 1024;
+        // --- State ---
+        let state = {
+            allData: [],
+            comparisonList: new Set(),
+            resizedImageBlob: null,
+            originalImageFile: null,
+            currentUser: null,
+            itemToDelete: null,
+            unsubscribe: null, // To store the Firestore listener
+        };
 
-            // --- Logger ---
-            function log(message, type = 'info') {
-                const now = new Date();
-                const timestamp = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-                
-                console[type] ? console[type](`[${timestamp}] ${message}`) : console.log(`[${timestamp}] ${message}`);
+        const picaInstance = pica();
+        const MAX_IMAGE_WIDTH = 1280;
+        const IMAGE_SIZE_LIMIT = 1024 * 1024; // 1MB
 
-                if (state.debugMode) {
-                    const logEntry = document.createElement('div');
-                    logEntry.className = `log-${type} border-b border-gray-700 py-1 px-2`;
-                    logEntry.textContent = `[${timestamp}] ${message}`;
-                    app.debug.logWindow.appendChild(logEntry);
-                    app.debug.logWindow.scrollTop = app.debug.logWindow.scrollHeight;
-                }
-            }
-
-            // --- Unicode handling functions ---
-            function unicodeToBase64(str) {
-                return btoa(unescape(encodeURIComponent(str)));
-            }
-
-            function base64ToUnicode(b64) {
-                return decodeURIComponent(escape(atob(b64)));
-            }
-
-
-            // --- GitHub API Functions ---
-            async function getGitHubFile(path) {
-                const { user, repo, token } = state.githubConfig;
-                if (!user || !repo || !token) {
-                    log('GitHub config is missing.', 'error');
-                    return null;
-                }
-                const url = `https://api.github.com/repos/${user}/${repo}/contents/${path}`;
-                log(`Fetching file from GitHub: ${url}`);
-                try {
-                    const response = await fetch(url, { headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' } });
-                    if (response.status === 404) {
-                        log(`File not found at ${path}`, 'warn');
-                        return null;
-                    }
-                    if (!response.ok) throw new Error(`GitHub API error: ${response.status} ${response.statusText}`);
-                    const data = await response.json();
-                    log(`Successfully fetched file: ${path}`, 'success');
-                    return data;
-                } catch (error) {
-                    log(`Failed to get GitHub file at ${path}: ${error.message}`, 'error');
-                    throw error;
-                }
-            }
-
-            async function uploadToGitHub(path, content, message, sha = null) {
-                const { user, repo, token } = state.githubConfig;
-                const url = `https://api.github.com/repos/${user}/${repo}/contents/${path}`;
-                const body = { message, content, sha };
-                if (!sha) delete body.sha;
-
-                log(`Uploading to GitHub: ${path}. SHA: ${sha || 'New file'}`);
-                const response = await fetch(url, {
-                    method: 'PUT',
-                    headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body)
-                });
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    log(`GitHub upload failed for ${path}: ${errorData.message}`, 'error');
-                    throw new Error(`GitHub API upload failed: ${errorData.message}`);
-                }
-                log(`Successfully uploaded to ${path}`, 'success');
-                return await response.json();
-            }
-
-            async function deleteGitHubFile(path, sha, message) {
-                const { user, repo, token } = state.githubConfig;
-                const url = `https://api.github.com/repos/${user}/${repo}/contents/${path}`;
-                const body = { message, sha };
-
-                log(`Deleting from GitHub: ${path}. SHA: ${sha}`);
-                const response = await fetch(url, {
-                    method: 'DELETE',
-                    headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' },
-                    body: JSON.stringify(body)
-                });
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    log(`GitHub delete failed for ${path}: ${errorData.message}`, 'error');
-                    throw new Error(`GitHub API delete failed: ${errorData.message}`);
-                }
-                log(`Successfully deleted ${path}`, 'success');
-                return await response.json();
-            }
-
-            function fileToBase64(file) {
-                return new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = () => resolve(reader.result.split(',')[1]);
-                    reader.onerror = error => reject(error);
-                    reader.readAsDataURL(file);
-                });
-            }
-
-            // --- Core Application Functions ---
-            async function loadDataFromSource() {
-                log('Starting data load from source...');
-                const { user, repo, token } = state.githubConfig;
-                if (user && repo && token) {
-                    try {
-                        const manifestFile = await getGitHubFile('manifest.json');
-                        if (manifestFile) {
-                            const manifestContent = base64ToUnicode(manifestFile.content);
-                            state.manifest = JSON.parse(manifestContent);
-                            log(`Manifest loaded: ${JSON.stringify(state.manifest)}`);
-                            let allData = [];
-                            for (const fileName of state.manifest.files) {
-                                const dbFile = await getGitHubFile(fileName);
-                                if(dbFile) {
-                                    const fileContent = base64ToUnicode(dbFile.content);
-                                    state.dbFileContents[fileName] = fileContent;
-                                    const dataInFile = JSON.parse(fileContent || '[]');
-                                    allData = allData.concat(dataInFile);
-                                    log(`Loaded ${dataInFile.length} entries from ${fileName}`);
-                                } else {
-                                    log(`DB file not found: ${fileName}, will be created on next save.`, 'warn');
-                                }
-                            }
-                            state.allData = allData;
-                            log(`Total entries loaded: ${state.allData.length}`, 'success');
-                            return;
-                        } else {
-                             log('manifest.json not found. Initializing empty state.', 'warn');
-                             state.manifest = { files: ['db_1.json'] };
-                             state.allData = [];
-                        }
-                    } catch (error) {
-                         log(`Critical error during data load: ${error.message}`, 'error');
-                         app.containers.noData.innerHTML = `<p class="text-xl text-red-400">데이터 로딩 실패!</p><p class="text-gray-500 mt-2">GitHub 저장소 정보 또는 토큰이 유효한지 확인해주세요. 오류: ${error.message}</p>`;
-                         app.containers.noData.classList.remove('hidden');
-                         throw error;
-                    }
-                }
-            }
-
-            async function init() {
-                log('Initializing application...');
-                app.containers.loading.classList.remove('hidden');
+        // --- Authentication ---
+        onAuthStateChanged(auth, user => {
+            state.currentUser = user;
+            if (user) {
+                console.log("User is signed in:", user.uid);
+                app.containers.auth.innerHTML = `
+                    <p class="text-sm text-gray-400">UID: ${user.uid.substring(0, 8)}...</p>
+                    <button id="logoutBtn" class="text-xs text-blue-400 hover:underline">로그아웃</button>
+                `;
+                document.getElementById('logoutBtn').addEventListener('click', () => signOut(auth));
+                loadData();
+            } else {
+                console.log("User is signed out.");
+                app.containers.auth.innerHTML = `
+                    <button id="loginBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">익명 로그인</button>
+                `;
+                document.getElementById('loginBtn').addEventListener('click', () => signInAnonymously(auth));
                 app.containers.gallery.innerHTML = '';
-                app.containers.noData.classList.add('hidden');
-
-                try {
-                    await loadDataFromSource();
-                    renderDashboard();
-                } catch(e) {
-                    log('Initialization failed.', 'error');
-                } finally {
-                    app.containers.loading.classList.add('hidden');
-                    if(state.allData.length === 0 && !app.containers.noData.textContent.includes('실패')) {
-                        app.containers.noData.classList.remove('hidden');
-                    }
-                }
+                app.containers.loading.classList.add('hidden');
+                app.containers.noData.classList.remove('hidden');
+                app.containers.noData.querySelector('p').textContent = '데이터를 보려면 로그인해주세요.';
+                if (state.unsubscribe) state.unsubscribe(); // Stop listening to data if logged out
             }
-
-            function renderDashboard(filter = '') {
-                log(`Rendering dashboard with filter: "${filter}"`);
-                app.containers.gallery.innerHTML = '';
-                const filteredData = state.allData.filter(item => {
-                    const searchTerm = filter.toLowerCase();
-                    return (
-                        item.title?.toLowerCase().includes(searchTerm) ||
-                        item.cameraModel?.toLowerCase().includes(searchTerm) ||
-                        item.lens?.toLowerCase().includes(searchTerm) ||
-                        item.sceneDesc?.toLowerCase().includes(searchTerm)
-                    );
-                }).sort((a, b) => new Date(b.date) - new Date(a.date));
-
-                if (filteredData.length === 0 && state.allData.length > 0) {
-                     app.containers.gallery.innerHTML = `<p class="col-span-full text-center text-gray-400">검색 결과가 없습니다.</p>`;
-                     return;
-                }
-                log(`Displaying ${filteredData.length} of ${state.allData.length} total entries.`);
-
-                filteredData.forEach(item => {
-                    const isSelected = state.comparisonList.has(item.id);
-                    const card = document.createElement('div');
-                    card.className = `bg-gray-800 rounded-lg overflow-hidden shadow-lg transform hover:-translate-y-1 transition-all duration-300 card-hover-glow cursor-pointer border-2 ${isSelected ? 'border-blue-500' : 'border-transparent'}`;
-                    card.dataset.id = item.id;
-                    
-                    const imageSrc = `https://raw.githubusercontent.com/${state.githubConfig.user}/${state.githubConfig.repo}/main/${item.image_viewer}?t=${Date.now()}`;
-
-                    card.innerHTML = `
-                        <img src="${imageSrc}" alt="${item.title}" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/1f2937/9ca3af?text=Image+Error';">
-                        <div class="p-4">
-                            <h3 class="font-bold text-lg truncate">${item.title}</h3>
-                            <p class="text-sm text-gray-400">${item.date || '날짜 없음'}</p>
-                            <p class="text-sm text-gray-500 truncate">${item.cameraModel || '카메라 정보 없음'}</p>
-                        </div>
-                        <div class="absolute top-2 right-2 flex items-center">
-                           <input type="checkbox" class="compare-checkbox h-6 w-6 rounded-md bg-gray-700 border-gray-500 text-blue-500 focus:ring-blue-500" ${isSelected ? 'checked' : ''}>
-                        </div>
-                        <button class="delete-btn absolute bottom-2 right-2 bg-red-800/50 hover:bg-red-700 p-2 rounded-full transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg>
-                        </button>
-                    `;
-                    
-                    card.querySelector('.compare-checkbox').addEventListener('click', (e) => { e.stopPropagation(); toggleComparisonItem(item.id); });
-                    card.querySelector('.delete-btn').addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        openDeleteConfirm(item.id);
-                    });
-                    card.addEventListener('click', (e) => {
-                        if (e.target.closest('.delete-btn')) return;
-                        toggleComparisonItem(item.id);
-                    });
-                    app.containers.gallery.appendChild(card);
-                });
-            }
-            
-            function toggleComparisonItem(id) {
-                const card = app.containers.gallery.querySelector(`[data-id="${id}"]`);
-                const checkbox = card.querySelector('.compare-checkbox');
-                if (state.comparisonList.has(id)) {
-                    state.comparisonList.delete(id);
-                    card.classList.remove('border-blue-500');
-                    checkbox.checked = false;
-                } else {
-                    state.comparisonList.add(id);
-                    card.classList.add('border-blue-500');
-                    checkbox.checked = true;
-                }
-                app.buttons.compare.disabled = state.comparisonList.size === 0;
-            }
-
-            function switchView(viewName) {
-                log(`Switching view to: ${viewName}`);
-                Object.values(app.views).forEach(view => view.classList.add('hidden'));
-                if (app.views[viewName]) {
-                    app.views[viewName].classList.remove('hidden');
-                }
-            }
-
-            function handleImageUpload(e) {
-                const file = e.target.files[0];
-                if (!file) return;
-                log(`Image selected: ${file.name}, size: ${Math.round(file.size / 1024)} KB`);
-
-                state.originalImageFile = file;
-                state.resizedImageBlob = null;
-
-                app.form.previewImage.src = URL.createObjectURL(file);
-                app.form.imagePreviewContainer.classList.remove('hidden');
-
-                if (file.size <= IMAGE_SIZE_LIMIT) {
-                    app.form.previewTitle.textContent = '미리보기 (원본 유지)';
-                    log('Image is under size limit. Will use original.');
-                } else {
-                    app.form.previewTitle.textContent = '미리보기 (리사이즈 진행 중...)';
-                    log('Image is over size limit. Resizing...');
-                    const img = new Image();
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        const targetWidth = Math.min(MAX_IMAGE_WIDTH, img.width);
-                        const targetHeight = (img.height / img.width) * targetWidth;
-                        canvas.width = targetWidth;
-                        canvas.height = targetHeight;
-                        
-                        picaInstance.resize(img, canvas)
-                            .then(result => picaInstance.toBlob(result, 'image/jpeg', 0.9))
-                            .then(blob => {
-                                state.resizedImageBlob = blob;
-                                app.form.previewImage.src = URL.createObjectURL(blob);
-                                app.form.previewTitle.textContent = '미리보기 (리사이즈됨)';
-                                log(`Image resized successfully. New size: ${Math.round(blob.size / 1024)} KB`, 'success');
-                            });
-                    };
-                    img.src = URL.createObjectURL(file);
-                }
-            }
-
-            async function handleSave(e) {
-                e.preventDefault();
-                if (!state.originalImageFile) {
-                    alert('결과물 이미지를 업로드해주세요.');
-                    return;
-                }
-
-                log('Save process started.');
-                showStatusModal('업로드 시작...', '파일을 GitHub에 업로드합니다.');
-
-                try {
-                    const id = document.getElementById('entryId').value || `test-${Date.now()}`;
-                    const originalFileName = state.originalImageFile.name;
-                    const fileExtension = originalFileName.slice(originalFileName.lastIndexOf('.'));
-                    
-                    const needsResize = state.originalImageFile.size > IMAGE_SIZE_LIMIT;
-
-                    const newEntry = {
-                        id,
-                        date: document.getElementById('date').value || new Date().toISOString().split('T')[0],
-                        title: document.getElementById('title').value,
-                        director: document.getElementById('director').value,
-                        sceneDesc: document.getElementById('sceneDesc').value,
-                        cameraModel: document.getElementById('cameraModel').value,
-                        lens: document.getElementById('lens').value,
-                        iso: document.getElementById('iso').value,
-                        aperture: document.getElementById('aperture').value,
-                        shutterSpeed: document.getElementById('shutterSpeed').value,
-                        whiteBalance: document.getElementById('whiteBalance').value,
-                        pictureProfile: document.getElementById('pictureProfile').value,
-                        focusDistance: document.getElementById('focusDistance').value,
-                        ndFilter: document.getElementById('ndFilter').value,
-                        image_original: `assets/originals/${id}${fileExtension}`,
-                        image_viewer: needsResize ? `assets/view/${id}.jpg` : `assets/originals/${id}${fileExtension}`
-                    };
-                    log(`New entry created with ID: ${id}`);
-
-                    // 1. Upload images
-                    if (needsResize) {
-                        updateStatusMessage('리사이즈된 이미지 업로드 중...');
-                        const resizedBase64 = await fileToBase64(state.resizedImageBlob);
-                        await uploadToGitHub(newEntry.image_viewer, resizedBase64, `feat: add resized image for ${id}`);
-
-                        updateStatusMessage('원본 이미지 업로드 중...');
-                        const originalBase64 = await fileToBase64(state.originalImageFile);
-                        await uploadToGitHub(newEntry.image_original, originalBase64, `feat: add original image for ${id}`);
-                    } else {
-                        updateStatusMessage('원본 이미지 업로드 중...');
-                        const originalBase64 = await fileToBase64(state.originalImageFile);
-                        await uploadToGitHub(newEntry.image_original, originalBase64, `feat: add original image for ${id}`);
-                    }
-
-                    // 2. Update JSON data
-                    updateStatusMessage('데이터베이스 파일 확인 중...');
-                    let manifestFile = await getGitHubFile('manifest.json');
-                    let isFirstUpload = manifestFile === null;
-
-                    let manifest = isFirstUpload ? { files: ['db_1.json'] } : JSON.parse(base64ToUnicode(manifestFile.content));
-                    let manifestSha = isFirstUpload ? null : manifestFile.sha;
-                    
-                    let targetDbFileName = manifest.files[manifest.files.length - 1];
-                    let dbFile = await getGitHubFile(targetDbFileName);
-                    let dbContent = dbFile ? base64ToUnicode(dbFile.content) : '[]';
-                    let dbSha = dbFile ? dbFile.sha : null;
-                    
-                    let dbData = JSON.parse(dbContent);
-                    
-                    if (new Blob([dbContent, JSON.stringify(newEntry)]).size > DB_FILE_SIZE_LIMIT && dbData.length > 0) {
-                        updateStatusMessage('새 데이터베이스 파일 생성 중...');
-                        const newFileIndex = manifest.files.length + 1;
-                        targetDbFileName = `db_${newFileIndex}.json`;
-                        dbData = [newEntry];
-                        dbSha = null;
-
-                        manifest.files.push(targetDbFileName);
-                        const newManifestContent = unicodeToBase64(JSON.stringify(manifest, null, 2));
-                        await uploadToGitHub('manifest.json', newManifestContent, `chore: update manifest for new db file`, manifestSha);
-                    } else {
-                        dbData.push(newEntry);
-                        if (isFirstUpload) {
-                             updateStatusMessage('manifest.json 생성 중...');
-                             const newManifestContent = unicodeToBase64(JSON.stringify(manifest, null, 2));
-                             await uploadToGitHub('manifest.json', newManifestContent, 'feat: create initial manifest', null);
-                        }
-                    }
-                    
-                    updateStatusMessage(`${targetDbFileName} 업데이트 중...`);
-                    const newDbContent = unicodeToBase64(JSON.stringify(dbData, null, 2));
-                    await uploadToGitHub(targetDbFileName, newDbContent, `feat: add data for ${id}`, dbSha);
-
-                    showStatusModal('업로드 성공!', '모든 파일이 성공적으로 저장되었습니다.', true);
-                    log('Save process completed successfully.', 'success');
-
-                } catch (error) {
-                    log(`Save process failed: ${error.message}`, 'error');
-                    showStatusModal('업로드 실패', `오류가 발생했습니다: ${error.message}`, true);
-                }
-            }
-
-            function openDeleteConfirm(itemId) {
-                state.itemToDelete = itemId;
-                const item = state.allData.find(i => i.id === itemId);
-                app.modal.deleteConfirmMessage.textContent = `'${item.title}' 항목을 정말 삭제하시겠습니까? 관련된 모든 데이터와 이미지가 GitHub에서 영구적으로 삭제되며, 되돌릴 수 없습니다.`;
-                app.modal.deleteConfirm.classList.remove('hidden');
-                log(`Opened delete confirmation for item: ${itemId}`);
-            }
-
-            async function handleDelete() {
-                const itemId = state.itemToDelete;
-                if (!itemId) return;
-
-                log(`Delete process started for item: ${itemId}`);
-                app.modal.deleteConfirm.classList.add('hidden');
-                showStatusModal('삭제 중...', '파일을 GitHub에서 삭제합니다.');
-
-                try {
-                    const itemToDelete = state.allData.find(i => i.id === itemId);
-                    if (!itemToDelete) throw new Error('Item not found in local data.');
-
-                    // 1. Delete images from GitHub
-                    const hasSeparateOriginal = itemToDelete.image_original && itemToDelete.image_viewer !== itemToDelete.image_original;
-                    
-                    if (hasSeparateOriginal) {
-                        updateStatusMessage('원본 이미지 삭제 중...');
-                        const originalFileInfo = await getGitHubFile(itemToDelete.image_original);
-                        if (originalFileInfo) {
-                            await deleteGitHubFile(itemToDelete.image_original, originalFileInfo.sha, `feat: delete original image for ${itemId}`);
-                        }
-                    }
-                    
-                    updateStatusMessage('뷰어 이미지 삭제 중...');
-                    const viewerFileInfo = await getGitHubFile(itemToDelete.image_viewer);
-                    if (viewerFileInfo) {
-                        await deleteGitHubFile(itemToDelete.image_viewer, viewerFileInfo.sha, `feat: delete viewer image for ${itemId}`);
-                    }
-
-                    // 2. Find which DB file contains the item
-                    let targetDbFileName = null;
-                    for (const fileName of state.manifest.files) {
-                        const dataInFile = JSON.parse(state.dbFileContents[fileName] || '[]');
-                        if (dataInFile.some(item => item.id === itemId)) {
-                            targetDbFileName = fileName;
-                            break;
-                        }
-                    }
-
-                    if (!targetDbFileName) throw new Error(`Could not find DB file for item ${itemId}`);
-                    log(`Item ${itemId} found in ${targetDbFileName}`);
-
-                    // 3. Update the DB file
-                    updateStatusMessage(`${targetDbFileName} 업데이트 중...`);
-                    const dbFile = await getGitHubFile(targetDbFileName);
-                    let dbData = JSON.parse(base64ToUnicode(dbFile.content));
-                    const updatedDbData = dbData.filter(item => item.id !== itemId);
-                    
-                    const newDbContent = unicodeToBase64(JSON.stringify(updatedDbData, null, 2));
-                    await uploadToGitHub(targetDbFileName, newDbContent, `feat: remove data for ${itemId}`, dbFile.sha);
-                    
-                    showStatusModal('삭제 성공!', '항목이 성공적으로 삭제되었습니다.', true);
-                    log(`Delete process for item ${itemId} completed successfully.`, 'success');
-
-                } catch (error) {
-                    log(`Delete process failed: ${error.message}`, 'error');
-                    showStatusModal('삭제 실패', `오류가 발생했습니다: ${error.message}`, true);
-                } finally {
-                    state.itemToDelete = null;
-                }
-            }
-            
-            function renderComparisonView() {
-                log(`Rendering comparison view for ${state.comparisonList.size} items.`);
-                switchView('comparison');
-                app.containers.comparisonGrid.innerHTML = '';
-                
-                state.comparisonList.forEach(id => {
-                    const item = state.allData.find(d => d.id === id);
-                    if (!item) {
-                        log(`Item with ID ${id} not found for comparison view.`, 'warn');
-                        return;
-                    }
-
-                    const itemDiv = document.createElement('div');
-                    itemDiv.className = 'bg-gray-800 rounded-lg shadow-lg p-4';
-                    const viewerSrc = `https://raw.githubusercontent.com/${state.githubConfig.user}/${state.githubConfig.repo}/main/${item.image_viewer}?t=${Date.now()}`;
-                    
-                    const hasSeparateOriginal = item.image_original && item.image_viewer !== item.image_original;
-                    const originalSrc = hasSeparateOriginal ? `https://raw.githubusercontent.com/${state.githubConfig.user}/${state.githubConfig.repo}/main/${item.image_original}?t=${Date.now()}` : '';
-
-                    itemDiv.innerHTML = `
-                        <img src="${viewerSrc}" alt="${item.title}" class="w-full h-64 object-cover rounded-md mb-4" onerror="this.onerror=null;this.src='https://placehold.co/600x400/1f2937/9ca3af?text=Image+Error';">
-                        <h3 class="font-bold text-xl mb-2">${item.title}</h3>
-                        <div class="space-y-1 text-sm text-gray-300">
-                            ${Object.entries(item).map(([key, value]) => {
-                                if (['id', 'title', 'image_original', 'image_viewer'].includes(key) || !value) return '';
-                                return `<div class="flex justify-between"><span class="font-semibold text-gray-400 capitalize">${key.replace(/([A-Z])/g, ' $1')}:</span> <span class="text-right">${value}</span></div>`;
-                            }).join('')}
-                        </div>
-                        ${hasSeparateOriginal ? `<button data-original-src="${originalSrc}" class="view-original-btn mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300">원본 이미지 보기</button>` : ''}
-                    `;
-                    app.containers.comparisonGrid.appendChild(itemDiv);
-                });
-
-                document.querySelectorAll('.view-original-btn').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        const src = e.target.dataset.originalSrc;
-                        app.modal.originalImageContent.src = src;
-                        app.modal.originalImage.classList.remove('hidden');
-                    });
-                });
-            }
-
-            function showStatusModal(title, message, isFinished = false) {
-                app.modal.status.classList.remove('hidden');
-                app.modal.statusTitle.textContent = title;
-                app.modal.statusMessage.textContent = message;
-                app.modal.statusLoader.style.display = isFinished ? 'none' : 'flex';
-                app.buttons.closeStatusModal.classList.toggle('hidden', !isFinished);
-            }
-            
-            function updateStatusMessage(message) {
-                app.modal.statusMessage.textContent = message;
-            }
-
-            // --- Event Listeners ---
-            app.buttons.newTest.addEventListener('click', () => {
-                app.form.formElement.reset();
-                app.form.title.textContent = '새 테스트 데이터 입력';
-                app.form.entryId.value = '';
-                app.form.imagePreviewContainer.classList.add('hidden');
-                state.resizedImageBlob = null; state.originalImageFile = null;
-                switchView('form');
-            });
-            
-            app.buttons.cancel.addEventListener('click', () => switchView('dashboard'));
-            app.buttons.backToDashboard.addEventListener('click', () => switchView('dashboard'));
-            app.buttons.compare.addEventListener('click', () => { if (state.comparisonList.size > 0) renderComparisonView(); });
-            app.form.imageUpload.addEventListener('change', handleImageUpload);
-            app.form.formElement.addEventListener('submit', handleSave);
-            app.buttons.closeStatusModal.addEventListener('click', () => {
-                app.modal.status.classList.add('hidden');
-                log('Closing status modal and re-initializing.');
-                init();
-                switchView('dashboard');
-            });
-            app.inputs.search.addEventListener('input', (e) => renderDashboard(e.target.value));
-
-            // Delete confirmation listeners
-            app.buttons.cancelDelete.addEventListener('click', () => {
-                app.modal.deleteConfirm.classList.add('hidden');
-                state.itemToDelete = null;
-            });
-            app.buttons.confirmDelete.addEventListener('click', handleDelete);
-
-            // Debugger event listeners
-            app.debug.toggleHandle.addEventListener('click', () => {
-                const isChecked = app.debug.toggle.checked;
-                app.debug.toggle.checked = !isChecked;
-                state.debugMode = !isChecked;
-                app.debug.container.classList.toggle('hidden', isChecked);
-                document.body.classList.toggle('pb-64', !isChecked);
-                log(`Debug mode ${state.debugMode ? 'ENABLED' : 'DISABLED'}.`);
-            });
-            app.debug.toggle.addEventListener('change', (e) => {
-                state.debugMode = e.target.checked;
-                app.debug.container.classList.toggle('hidden', !state.debugMode);
-                document.body.classList.toggle('pb-64', state.debugMode);
-                log(`Debug mode ${state.debugMode ? 'ENABLED' : 'DISABLED'}.`);
-            });
-
-
-            // --- Initial Load ---
-            init();
         });
+
+        // --- Core Application Functions ---
+        function loadData() {
+            app.containers.loading.classList.remove('hidden');
+            app.containers.gallery.innerHTML = '';
+            
+            const testsCollection = collection(db, "camera_tests");
+            
+            // Listen for real-time updates
+            state.unsubscribe = onSnapshot(testsCollection, (querySnapshot) => {
+                state.allData = [];
+                querySnapshot.forEach((doc) => {
+                    state.allData.push({ id: doc.id, ...doc.data() });
+                });
+                console.log(`Loaded ${state.allData.length} entries from Firestore.`);
+                renderDashboard();
+                app.containers.loading.classList.add('hidden');
+                app.containers.noData.classList.toggle('hidden', state.allData.length > 0);
+            }, (error) => {
+                console.error("Error loading data from Firestore: ", error);
+                app.containers.loading.classList.add('hidden');
+                app.containers.noData.querySelector('p').textContent = `데이터 로딩 오류: ${error.message}`;
+                app.containers.noData.classList.remove('hidden');
+            });
+        }
+
+        function renderDashboard(filter = '') {
+            app.containers.gallery.innerHTML = '';
+            const filteredData = state.allData.filter(item => {
+                const searchTerm = filter.toLowerCase();
+                return (
+                    item.title?.toLowerCase().includes(searchTerm) ||
+                    item.cameraModel?.toLowerCase().includes(searchTerm) ||
+                    item.lens?.toLowerCase().includes(searchTerm) ||
+                    item.sceneDesc?.toLowerCase().includes(searchTerm)
+                );
+            }).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            if (filteredData.length === 0 && state.allData.length > 0) {
+                 app.containers.gallery.innerHTML = `<p class="col-span-full text-center text-gray-400">검색 결과가 없습니다.</p>`;
+                 return;
+            }
+
+            filteredData.forEach(item => {
+                const isSelected = state.comparisonList.has(item.id);
+                const card = document.createElement('div');
+                card.className = `bg-gray-800 rounded-lg overflow-hidden shadow-lg transform hover:-translate-y-1 transition-all duration-300 card-hover-glow cursor-pointer border-2 ${isSelected ? 'border-blue-500' : 'border-transparent'}`;
+                card.dataset.id = item.id;
+                
+                card.innerHTML = `
+                    <img src="${item.image_viewer}" alt="${item.title}" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/1f2937/9ca3af?text=Image+Error';">
+                    <div class="p-4">
+                        <h3 class="font-bold text-lg truncate">${item.title}</h3>
+                        <p class="text-sm text-gray-400">${item.date || '날짜 없음'}</p>
+                        <p class="text-sm text-gray-500 truncate">${item.cameraModel || '카메라 정보 없음'}</p>
+                    </div>
+                    <div class="absolute top-2 right-2 flex items-center">
+                       <input type="checkbox" class="compare-checkbox h-6 w-6 rounded-md bg-gray-700 border-gray-500 text-blue-500 focus:ring-blue-500" ${isSelected ? 'checked' : ''}>
+                    </div>
+                    <button class="delete-btn absolute bottom-2 right-2 bg-red-800/50 hover:bg-red-700 p-2 rounded-full transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg>
+                    </button>
+                `;
+                
+                card.querySelector('.compare-checkbox').addEventListener('click', (e) => { e.stopPropagation(); toggleComparisonItem(item.id); });
+                card.querySelector('.delete-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openDeleteConfirm(item.id);
+                });
+                card.addEventListener('click', (e) => {
+                    if (e.target.closest('.delete-btn')) return;
+                    toggleComparisonItem(item.id);
+                });
+                app.containers.gallery.appendChild(card);
+            });
+        }
+        
+        function toggleComparisonItem(id) {
+            const card = app.containers.gallery.querySelector(`[data-id="${id}"]`);
+            const checkbox = card.querySelector('.compare-checkbox');
+            if (state.comparisonList.has(id)) {
+                state.comparisonList.delete(id);
+                card.classList.remove('border-blue-500');
+                checkbox.checked = false;
+            } else {
+                state.comparisonList.add(id);
+                card.classList.add('border-blue-500');
+                checkbox.checked = true;
+            }
+            app.buttons.compare.disabled = state.comparisonList.size === 0;
+        }
+
+        function switchView(viewName) {
+            Object.values(app.views).forEach(view => view.classList.add('hidden'));
+            if (app.views[viewName]) {
+                app.views[viewName].classList.remove('hidden');
+            }
+        }
+
+        function handleImageUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            state.originalImageFile = file;
+            state.resizedImageBlob = null;
+
+            app.form.previewImage.src = URL.createObjectURL(file);
+            app.form.imagePreviewContainer.classList.remove('hidden');
+
+            if (file.size <= IMAGE_SIZE_LIMIT) {
+                app.form.previewTitle.textContent = '미리보기 (원본 유지)';
+            } else {
+                app.form.previewTitle.textContent = '미리보기 (리사이즈 진행 중...)';
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const targetWidth = Math.min(MAX_IMAGE_WIDTH, img.width);
+                    const targetHeight = (img.height / img.width) * targetWidth;
+                    canvas.width = targetWidth;
+                    canvas.height = targetHeight;
+                    
+                    picaInstance.resize(img, canvas)
+                        .then(result => picaInstance.toBlob(result, 'image/jpeg', 0.9))
+                        .then(blob => {
+                            state.resizedImageBlob = blob;
+                            app.form.previewImage.src = URL.createObjectURL(blob);
+                            app.form.previewTitle.textContent = '미리보기 (리사이즈됨)';
+                        });
+                };
+                img.src = URL.createObjectURL(file);
+            }
+        }
+
+        async function handleSave(e) {
+            e.preventDefault();
+            if (!state.originalImageFile) {
+                alert('결과물 이미지를 업로드해주세요.');
+                return;
+            }
+            if (!state.currentUser) {
+                alert('로그인이 필요합니다.');
+                return;
+            }
+
+            showStatusModal('업로드 시작...', '파일을 Firebase에 업로드합니다.');
+
+            try {
+                const id = `test-${Date.now()}`;
+                const originalFileName = state.originalImageFile.name;
+                const fileExtension = originalFileName.slice(originalFileName.lastIndexOf('.'));
+                const needsResize = state.originalImageFile.size > IMAGE_SIZE_LIMIT;
+                
+                let viewerImageUrl, originalImageUrl;
+
+                // 1. Upload images to Firebase Storage
+                if (needsResize) {
+                    updateStatusMessage('리사이즈된 이미지 업로드 중...');
+                    const resizedImageRef = ref(storage, `images/${id}.jpg`);
+                    await uploadBytes(resizedImageRef, state.resizedImageBlob);
+                    viewerImageUrl = await getDownloadURL(resizedImageRef);
+
+                    updateStatusMessage('원본 이미지 업로드 중...');
+                    const originalImageRef = ref(storage, `images/${id}_original${fileExtension}`);
+                    await uploadBytes(originalImageRef, state.originalImageFile);
+                    originalImageUrl = await getDownloadURL(originalImageRef);
+                } else {
+                    updateStatusMessage('원본 이미지 업로드 중...');
+                    const imageRef = ref(storage, `images/${id}${fileExtension}`);
+                    await uploadBytes(imageRef, state.originalImageFile);
+                    viewerImageUrl = await getDownloadURL(imageRef);
+                    originalImageUrl = viewerImageUrl; // Same URL for both
+                }
+
+                // 2. Save data to Firestore
+                updateStatusMessage('데이터베이스에 저장 중...');
+                const newEntry = {
+                    owner: state.currentUser.uid,
+                    createdAt: new Date(),
+                    date: document.getElementById('date').value || new Date().toISOString().split('T')[0],
+                    title: document.getElementById('title').value,
+                    director: document.getElementById('director').value,
+                    sceneDesc: document.getElementById('sceneDesc').value,
+                    cameraModel: document.getElementById('cameraModel').value,
+                    lens: document.getElementById('lens').value,
+                    iso: document.getElementById('iso').value,
+                    aperture: document.getElementById('aperture').value,
+                    shutterSpeed: document.getElementById('shutterSpeed').value,
+                    whiteBalance: document.getElementById('whiteBalance').value,
+                    pictureProfile: document.getElementById('pictureProfile').value,
+                    focusDistance: document.getElementById('focusDistance').value,
+                    ndFilter: document.getElementById('ndFilter').value,
+                    image_original: originalImageUrl,
+                    image_viewer: viewerImageUrl,
+                    storage_path_original: needsResize ? `images/${id}_original${fileExtension}` : `images/${id}${fileExtension}`,
+                    storage_path_viewer: `images/${id}.jpg`
+                };
+                
+                await addDoc(collection(db, "camera_tests"), newEntry);
+
+                showStatusModal('업로드 성공!', '모든 파일이 성공적으로 저장되었습니다.', true);
+
+            } catch (error) {
+                console.error("Save failed:", error);
+                showStatusModal('업로드 실패', `오류가 발생했습니다: ${error.message}`, true);
+            }
+        }
+
+        function openDeleteConfirm(itemId) {
+            state.itemToDelete = itemId;
+            const item = state.allData.find(i => i.id === itemId);
+            app.modal.deleteConfirmMessage.textContent = `'${item.title}' 항목을 정말 삭제하시겠습니까? 관련된 모든 데이터와 이미지가 영구적으로 삭제되며, 되돌릴 수 없습니다.`;
+            app.modal.deleteConfirm.classList.remove('hidden');
+        }
+
+        async function handleDelete() {
+            const itemId = state.itemToDelete;
+            if (!itemId) return;
+
+            app.modal.deleteConfirm.classList.add('hidden');
+            showStatusModal('삭제 중...', '파일을 Firebase에서 삭제합니다.');
+
+            try {
+                const itemToDelete = state.allData.find(i => i.id === itemId);
+                if (!itemToDelete) throw new Error('Item not found in local data.');
+                
+                // Firestore 보안 규칙으로 소유자만 삭제 가능하게 설정하는 것이 이상적입니다.
+                // 여기서는 클라이언트에서 소유자 확인을 간단히 추가합니다.
+                if (itemToDelete.owner !== state.currentUser.uid) {
+                    throw new Error("자신이 등록한 항목만 삭제할 수 있습니다.");
+                }
+
+                // 1. Delete images from Storage
+                const hasSeparateOriginal = itemToDelete.storage_path_original && itemToDelete.storage_path_viewer !== itemToDelete.storage_path_original;
+                if (hasSeparateOriginal) {
+                    updateStatusMessage('원본 이미지 삭제 중...');
+                    const originalRef = ref(storage, itemToDelete.storage_path_original);
+                    await deleteObject(originalRef).catch(e => console.warn("Original image delete failed, might not exist:", e));
+                }
+                updateStatusMessage('뷰어 이미지 삭제 중...');
+                const viewerRef = ref(storage, itemToDelete.storage_path_viewer);
+                await deleteObject(viewerRef).catch(e => console.warn("Viewer image delete failed, might not exist:", e));
+                
+                // 2. Delete data from Firestore
+                updateStatusMessage('데이터베이스에서 삭제 중...');
+                await deleteDoc(doc(db, "camera_tests", itemId));
+
+                showStatusModal('삭제 성공!', '항목이 성공적으로 삭제되었습니다.', true);
+
+            } catch (error) {
+                console.error("Delete failed:", error);
+                showStatusModal('삭제 실패', `오류가 발생했습니다: ${error.message}`, true);
+            } finally {
+                state.itemToDelete = null;
+            }
+        }
+        
+        function renderComparisonView() {
+            switchView('comparison');
+            app.containers.comparisonGrid.innerHTML = '';
+            
+            state.comparisonList.forEach(id => {
+                const item = state.allData.find(d => d.id === id);
+                if (!item) return;
+
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'bg-gray-800 rounded-lg shadow-lg p-4';
+                
+                const hasSeparateOriginal = item.image_original && item.image_viewer !== item.image_original;
+
+                itemDiv.innerHTML = `
+                    <img src="${item.image_viewer}" alt="${item.title}" class="w-full h-64 object-cover rounded-md mb-4" onerror="this.onerror=null;this.src='https://placehold.co/600x400/1f2937/9ca3af?text=Image+Error';">
+                    <h3 class="font-bold text-xl mb-2">${item.title}</h3>
+                    <div class="space-y-1 text-sm text-gray-300">
+                        ${Object.entries(item).map(([key, value]) => {
+                            if (['id', 'owner', 'createdAt', 'image_original', 'image_viewer', 'storage_path_original', 'storage_path_viewer'].includes(key) || !value) return '';
+                            return `<div class="flex justify-between"><span class="font-semibold text-gray-400 capitalize">${key.replace(/([A-Z])/g, ' $1')}:</span> <span class="text-right">${value}</span></div>`;
+                        }).join('')}
+                    </div>
+                    ${hasSeparateOriginal ? `<button data-original-src="${item.image_original}" class="view-original-btn mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300">원본 이미지 보기</button>` : ''}
+                `;
+                app.containers.comparisonGrid.appendChild(itemDiv);
+            });
+
+            document.querySelectorAll('.view-original-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const src = e.target.dataset.originalSrc;
+                    app.modal.originalImageContent.src = src;
+                    app.modal.originalImage.classList.remove('hidden');
+                });
+            });
+        }
+
+        function showStatusModal(title, message, isFinished = false) {
+            app.modal.status.classList.remove('hidden');
+            app.modal.statusTitle.textContent = title;
+            app.modal.statusMessage.textContent = message;
+            app.modal.statusLoader.style.display = isFinished ? 'none' : 'flex';
+            app.buttons.closeStatusModal.classList.toggle('hidden', !isFinished);
+        }
+        
+        function updateStatusMessage(message) {
+            app.modal.statusMessage.textContent = message;
+        }
+
+        // --- Event Listeners ---
+        app.buttons.newTest.addEventListener('click', () => {
+            if (!state.currentUser) {
+                alert('로그인이 필요합니다.');
+                return;
+            }
+            app.form.formElement.reset();
+            app.form.title.textContent = '새 테스트 데이터 입력';
+            app.form.entryId.value = '';
+            app.form.imagePreviewContainer.classList.add('hidden');
+            state.resizedImageBlob = null; state.originalImageFile = null;
+            switchView('form');
+        });
+        
+        app.buttons.cancel.addEventListener('click', () => switchView('dashboard'));
+        app.buttons.backToDashboard.addEventListener('click', () => switchView('dashboard'));
+        app.buttons.compare.addEventListener('click', () => { if (state.comparisonList.size > 0) renderComparisonView(); });
+        app.form.imageUpload.addEventListener('change', handleImageUpload);
+        app.form.formElement.addEventListener('submit', handleSave);
+        app.buttons.closeStatusModal.addEventListener('click', () => {
+            app.modal.status.classList.add('hidden');
+            switchView('dashboard');
+        });
+        app.inputs.search.addEventListener('input', (e) => renderDashboard(e.target.value));
+
+        // Delete confirmation listeners
+        app.buttons.cancelDelete.addEventListener('click', () => {
+            app.modal.deleteConfirm.classList.add('hidden');
+            state.itemToDelete = null;
+        });
+        app.buttons.confirmDelete.addEventListener('click', handleDelete);
     </script>
 </body>
 </html>
