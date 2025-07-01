@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cam-Set Pro | 카메라 세팅 관리 (v0.02)</title>
+    <title>Cam-Set Pro | 카메라 세팅 관리 (v0.08)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pica/9.0.1/pica.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -25,19 +25,39 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        /* Debugger Styles */
+        #debugContainer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(5px);
+            border-top: 1px solid #4a5568;
+            z-index: 100;
+        }
+        #logWindow {
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.8rem;
+        }
+        .log-info { color: #e2e8f0; }
+        .log-success { color: #48bb78; }
+        .log-error { color: #f56565; }
+        .log-warn { color: #ecc94b; }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-200">
 
     <!-- App Container -->
-    <div id="app" class="container mx-auto p-4 md:p-8">
+    <div id="app" class="container mx-auto p-4 md:p-8 mb-64">
 
         <!-- Header -->
         <header class="flex flex-wrap justify-between items-center mb-8 gap-4">
-            <h1 class="text-3xl font-bold text-white">Cam-Set Pro v0.02</h1>
+            <h1 class="text-3xl font-bold text-white">Cam-Set Pro v0.08</h1>
             <div>
-                <button id="settingsBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300">설정</button>
-                <button id="compareBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 disabled:bg-gray-500 disabled:cursor-not-allowed ml-2" disabled>비교하기</button>
+                <button id="compareBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 disabled:bg-gray-500 disabled:cursor-not-allowed" disabled>비교하기</button>
                 <button id="newTestBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 ml-2">새 테스트 추가</button>
             </div>
         </header>
@@ -57,7 +77,7 @@
                 </div>
                  <div id="no-data" class="text-center py-16 hidden">
                     <p class="text-xl text-gray-400">저장된 테스트 데이터가 없습니다.</p>
-                    <p class="text-gray-500 mt-2">`manifest.json` 파일이 없거나 GitHub 연동 설정이 필요합니다.</p>
+                    <p class="text-gray-500 mt-2">`garimto81/camtest` 저장소에 `manifest.json` 파일이 있는지 확인해주세요.</p>
                 </div>
             </div>
 
@@ -65,7 +85,7 @@
             <div id="formView" class="hidden">
                 <h2 id="formTitle" class="text-2xl font-semibold mb-6">새 테스트 데이터 입력</h2>
                 <form id="testForm" class="bg-gray-800 p-8 rounded-lg shadow-xl space-y-6">
-                    <!-- Basic Info -->
+                    <!-- Form fields... -->
                     <fieldset class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <legend class="text-lg font-medium text-white mb-2">기본 정보</legend>
                         <input type="hidden" id="entryId">
@@ -74,15 +94,11 @@
                         <input type="date" id="date" class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-400">
                         <textarea id="sceneDesc" placeholder="장면 상세 설명" rows="3" class="md:col-span-2 bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
                     </fieldset>
-
-                    <!-- Camera Info -->
                     <fieldset class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <legend class="text-lg font-medium text-white mb-2">카메라 정보</legend>
                         <input type="text" id="cameraModel" placeholder="카메라 모델 (예: Sony FX3)" class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <input type="text" id="lens" placeholder="렌즈 (예: 24-70mm GM II)" class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </fieldset>
-                    
-                    <!-- Core Settings -->
                     <fieldset class="grid grid-cols-2 md:grid-cols-4 gap-6">
                         <legend class="text-lg font-medium text-white mb-2 col-span-full">핵심 세팅 (선택 사항)</legend>
                         <input type="number" id="iso" placeholder="ISO" class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -93,8 +109,6 @@
                         <input type="text" id="focusDistance" placeholder="Focus Distance" class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <input type="text" id="ndFilter" placeholder="ND Filter" class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </fieldset>
-
-                    <!-- Image Upload -->
                     <fieldset>
                         <legend class="text-lg font-medium text-white mb-2">결과물 이미지</legend>
                         <input type="file" id="imageUpload" accept="image/jpeg, image/png" class="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" required>
@@ -103,8 +117,6 @@
                             <img id="previewImage" class="mt-2 rounded-lg w-full max-w-md mx-auto h-auto object-contain bg-gray-700/50">
                         </div>
                     </fieldset>
-
-                    <!-- Actions -->
                     <div class="flex justify-end space-x-4 pt-4">
                         <button type="button" id="cancelBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-lg transition duration-300">취소</button>
                         <button type="submit" id="saveBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition duration-300">저장</button>
@@ -123,7 +135,7 @@
         </main>
     </div>
 
-    <!-- Modal for Upload Status -->
+    <!-- Modal for Upload/Delete Status -->
     <div id="statusModal" class="fixed inset-0 z-50 flex items-center justify-center modal-bg hidden">
         <div class="bg-gray-800 rounded-lg shadow-2xl p-8 w-full max-w-md text-center">
             <div id="statusLoader" class="flex justify-center mb-4"><div class="loader"></div></div>
@@ -133,28 +145,42 @@
         </div>
     </div>
     
-    <!-- Modal for GitHub Settings -->
-    <div id="githubSettingsModal" class="fixed inset-0 z-50 flex items-center justify-center modal-bg hidden">
-        <div class="bg-gray-800 rounded-lg shadow-2xl p-8 w-full max-w-lg">
-            <h3 class="text-2xl font-bold text-white mb-4">GitHub 연동 설정</h3>
-            <p class="text-gray-400 text-sm mb-6">데이터 자동 업로드를 위해 GitHub 정보를 입력해주세요. 이 정보는 브라우저에만 저장됩니다.</p>
-            <form id="githubSettingsForm" class="space-y-4">
-                <input type="text" id="githubUser" placeholder="GitHub 사용자 이름" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-                <input type="text" id="githubRepo" placeholder="저장소 이름 (예: cam-set-pro-data)" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-                <input type="password" id="githubToken" placeholder="Personal Access Token (repo 권한 필요)" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-                <p class="text-xs text-gray-500">토큰은 페이지를 떠나면 사라집니다. 보안을 위해 페이지를 열 때마다 입력해주세요.</p>
-                 <a href="https://github.com/settings/tokens/new?scopes=repo" target="_blank" class="text-blue-400 hover:underline text-sm">새 Personal Access Token 만들기</a>
-                <div class="flex justify-end space-x-4 pt-4">
-                    <button type="button" id="cancelSettingsBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">취소</button>
-                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">설정 저장</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
     <!-- Modal for Original Image View -->
     <div id="originalImageViewModal" class="fixed inset-0 z-50 flex items-center justify-center modal-bg hidden" onclick="this.classList.add('hidden')">
         <img id="originalImageContent" src="" alt="Original Image" class="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl">
+    </div>
+
+    <!-- Modal for Delete Confirmation -->
+    <div id="deleteConfirmModal" class="fixed inset-0 z-50 flex items-center justify-center modal-bg hidden">
+        <div class="bg-gray-800 rounded-lg shadow-2xl p-8 w-full max-w-md">
+            <h3 class="text-2xl font-bold text-red-500 mb-4">삭제 확인</h3>
+            <p id="deleteConfirmMessage" class="text-gray-300 mb-6">이 항목을 정말 삭제하시겠습니까? 관련된 모든 데이터와 이미지가 GitHub에서 영구적으로 삭제되며, 되돌릴 수 없습니다.</p>
+            <div class="flex justify-end space-x-4">
+                <button id="cancelDeleteBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">취소</button>
+                <button id="confirmDeleteBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg">삭제</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Debugger UI -->
+    <div id="debugContainer" class="hidden">
+        <div class="p-2 flex justify-between items-center bg-gray-900">
+            <h3 class="text-lg font-bold text-yellow-400">디버그 로그</h3>
+            <div class="flex items-center">
+                <span class="text-sm mr-2">디버그 모드</span>
+                <label for="debugToggle" class="flex items-center cursor-pointer">
+                    <div class="relative">
+                        <input type="checkbox" id="debugToggle" class="sr-only">
+                        <div class="block bg-gray-600 w-10 h-6 rounded-full"></div>
+                        <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition"></div>
+                    </div>
+                </label>
+            </div>
+        </div>
+        <div id="logWindow" class="p-2"></div>
+    </div>
+    <div id="debug-toggle-handle" class="fixed bottom-4 right-4 bg-yellow-500 text-black w-12 h-12 rounded-full flex items-center justify-center cursor-pointer z-[101] shadow-lg">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 16v-2m8-6h2M4 12H2m15.364 6.364l1.414 1.414M4.222 4.222l1.414 1.414M18.364 4.222l-1.414 1.414M5.636 18.364l-1.414 1.414M12 16a4 4 0 100-8 4 4 0 000 8z" /></svg>
     </div>
 
 
@@ -169,9 +195,9 @@
                     cancel: document.getElementById('cancelBtn'),
                     save: document.getElementById('saveBtn'),
                     backToDashboard: document.getElementById('backToDashboardBtn'),
-                    settings: document.getElementById('settingsBtn'),
-                    cancelSettings: document.getElementById('cancelSettingsBtn'),
                     closeStatusModal: document.getElementById('closeStatusModalBtn'),
+                    cancelDelete: document.getElementById('cancelDeleteBtn'),
+                    confirmDelete: document.getElementById('confirmDeleteBtn'),
                 },
                 containers: { gallery: document.getElementById('gallery'), comparisonGrid: document.getElementById('comparisonGrid'), loading: document.getElementById('loading'), noData: document.getElementById('no-data') },
                 form: {
@@ -188,10 +214,16 @@
                     statusTitle: document.getElementById('statusTitle'),
                     statusMessage: document.getElementById('statusMessage'),
                     statusLoader: document.getElementById('statusLoader'),
-                    githubSettings: document.getElementById('githubSettingsModal'),
-                    githubSettingsForm: document.getElementById('githubSettingsForm'),
                     originalImage: document.getElementById('originalImageViewModal'),
                     originalImageContent: document.getElementById('originalImageContent'),
+                    deleteConfirm: document.getElementById('deleteConfirmModal'),
+                    deleteConfirmMessage: document.getElementById('deleteConfirmMessage'),
+                },
+                debug: {
+                    toggleHandle: document.getElementById('debug-toggle-handle'),
+                    container: document.getElementById('debugContainer'),
+                    toggle: document.getElementById('debugToggle'),
+                    logWindow: document.getElementById('logWindow'),
                 },
                 inputs: { search: document.getElementById('searchInput') }
             };
@@ -204,7 +236,13 @@
                 comparisonList: new Set(),
                 resizedImageBlob: null,
                 originalImageFile: null,
-                githubConfig: { user: '', repo: '', token: '' }
+                githubConfig: { 
+                    user: 'garimto81', 
+                    repo: 'camtest', 
+                    token: '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' 
+                },
+                debugMode: false,
+                itemToDelete: null,
             };
 
             const picaInstance = pica();
@@ -212,18 +250,53 @@
             const IMAGE_SIZE_LIMIT = 1024 * 1024; // 1MB
             const DB_FILE_SIZE_LIMIT = 900 * 1024;
 
+            // --- Logger ---
+            function log(message, type = 'info') {
+                const now = new Date();
+                const timestamp = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+                
+                console[type] ? console[type](`[${timestamp}] ${message}`) : console.log(`[${timestamp}] ${message}`);
+
+                if (state.debugMode) {
+                    const logEntry = document.createElement('div');
+                    logEntry.className = `log-${type} border-b border-gray-700 py-1 px-2`;
+                    logEntry.textContent = `[${timestamp}] ${message}`;
+                    app.debug.logWindow.appendChild(logEntry);
+                    app.debug.logWindow.scrollTop = app.debug.logWindow.scrollHeight;
+                }
+            }
+
+            // --- Unicode handling functions ---
+            function unicodeToBase64(str) {
+                return btoa(unescape(encodeURIComponent(str)));
+            }
+
+            function base64ToUnicode(b64) {
+                return decodeURIComponent(escape(atob(b64)));
+            }
+
+
             // --- GitHub API Functions ---
             async function getGitHubFile(path) {
                 const { user, repo, token } = state.githubConfig;
-                if (!user || !repo || !token) return null;
+                if (!user || !repo || !token) {
+                    log('GitHub config is missing.', 'error');
+                    return null;
+                }
                 const url = `https://api.github.com/repos/${user}/${repo}/contents/${path}`;
+                log(`Fetching file from GitHub: ${url}`);
                 try {
                     const response = await fetch(url, { headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' } });
-                    if (response.status === 404) return null;
-                    if (!response.ok) throw new Error(`GitHub API error: ${response.statusText}`);
-                    return await response.json();
+                    if (response.status === 404) {
+                        log(`File not found at ${path}`, 'warn');
+                        return null;
+                    }
+                    if (!response.ok) throw new Error(`GitHub API error: ${response.status} ${response.statusText}`);
+                    const data = await response.json();
+                    log(`Successfully fetched file: ${path}`, 'success');
+                    return data;
                 } catch (error) {
-                    console.error(`Failed to get GitHub file at ${path}:`, error);
+                    log(`Failed to get GitHub file at ${path}: ${error.message}`, 'error');
                     throw error;
                 }
             }
@@ -234,6 +307,7 @@
                 const body = { message, content, sha };
                 if (!sha) delete body.sha;
 
+                log(`Uploading to GitHub: ${path}. SHA: ${sha || 'New file'}`);
                 const response = await fetch(url, {
                     method: 'PUT',
                     headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
@@ -241,8 +315,30 @@
                 });
                 if (!response.ok) {
                     const errorData = await response.json();
+                    log(`GitHub upload failed for ${path}: ${errorData.message}`, 'error');
                     throw new Error(`GitHub API upload failed: ${errorData.message}`);
                 }
+                log(`Successfully uploaded to ${path}`, 'success');
+                return await response.json();
+            }
+
+            async function deleteGitHubFile(path, sha, message) {
+                const { user, repo, token } = state.githubConfig;
+                const url = `https://api.github.com/repos/${user}/${repo}/contents/${path}`;
+                const body = { message, sha };
+
+                log(`Deleting from GitHub: ${path}. SHA: ${sha}`);
+                const response = await fetch(url, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' },
+                    body: JSON.stringify(body)
+                });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    log(`GitHub delete failed for ${path}: ${errorData.message}`, 'error');
+                    throw new Error(`GitHub API delete failed: ${errorData.message}`);
+                }
+                log(`Successfully deleted ${path}`, 'success');
                 return await response.json();
             }
 
@@ -257,65 +353,66 @@
 
             // --- Core Application Functions ---
             async function loadDataFromSource() {
+                log('Starting data load from source...');
                 const { user, repo, token } = state.githubConfig;
                 if (user && repo && token) {
                     try {
                         const manifestFile = await getGitHubFile('manifest.json');
                         if (manifestFile) {
-                            const manifestContent = atob(manifestFile.content);
+                            const manifestContent = base64ToUnicode(manifestFile.content);
                             state.manifest = JSON.parse(manifestContent);
+                            log(`Manifest loaded: ${JSON.stringify(state.manifest)}`);
                             let allData = [];
                             for (const fileName of state.manifest.files) {
                                 const dbFile = await getGitHubFile(fileName);
                                 if(dbFile) {
-                                    const fileContent = atob(dbFile.content);
+                                    const fileContent = base64ToUnicode(dbFile.content);
                                     state.dbFileContents[fileName] = fileContent;
-                                    allData = allData.concat(JSON.parse(fileContent || '[]'));
+                                    const dataInFile = JSON.parse(fileContent || '[]');
+                                    allData = allData.concat(dataInFile);
+                                    log(`Loaded ${dataInFile.length} entries from ${fileName}`);
+                                } else {
+                                    log(`DB file not found: ${fileName}, will be created on next save.`, 'warn');
                                 }
                             }
                             state.allData = allData;
+                            log(`Total entries loaded: ${state.allData.length}`, 'success');
                             return;
                         } else {
-                             // If manifest is not found, it might be a new repo.
+                             log('manifest.json not found. Initializing empty state.', 'warn');
                              state.manifest = { files: ['db_1.json'] };
                              state.allData = [];
                         }
                     } catch (error) {
-                         console.error("Could not load data from GitHub.", error);
+                         log(`Critical error during data load: ${error.message}`, 'error');
                          app.containers.noData.innerHTML = `<p class="text-xl text-red-400">데이터 로딩 실패!</p><p class="text-gray-500 mt-2">GitHub 저장소 정보 또는 토큰이 유효한지 확인해주세요. 오류: ${error.message}</p>`;
                          app.containers.noData.classList.remove('hidden');
                          throw error;
                     }
-                } else {
-                    app.containers.noData.innerHTML = `<p class="text-xl text-gray-400">GitHub 연동이 필요합니다.</p><p class="text-gray-500 mt-2">'설정' 버튼을 눌러 GitHub 정보를 입력해주세요.</p>`;
-                    app.containers.noData.classList.remove('hidden');
                 }
             }
 
             async function init() {
+                log('Initializing application...');
                 app.containers.loading.classList.remove('hidden');
                 app.containers.gallery.innerHTML = '';
                 app.containers.noData.classList.add('hidden');
-                
-                const savedConfig = JSON.parse(localStorage.getItem('camSetProGithubConfig') || '{}');
-                state.githubConfig.user = savedConfig.user || '';
-                state.githubConfig.repo = savedConfig.repo || '';
-                // Token is not persisted for security.
 
                 try {
                     await loadDataFromSource();
                     renderDashboard();
                 } catch(e) {
-                    // Error is already displayed by loadDataFromSource
+                    log('Initialization failed.', 'error');
                 } finally {
                     app.containers.loading.classList.add('hidden');
-                    if(state.allData.length === 0 && !app.containers.noData.textContent.includes('실패') && !app.containers.noData.textContent.includes('연동')) {
+                    if(state.allData.length === 0 && !app.containers.noData.textContent.includes('실패')) {
                         app.containers.noData.classList.remove('hidden');
                     }
                 }
             }
 
             function renderDashboard(filter = '') {
+                log(`Rendering dashboard with filter: "${filter}"`);
                 app.containers.gallery.innerHTML = '';
                 const filteredData = state.allData.filter(item => {
                     const searchTerm = filter.toLowerCase();
@@ -331,6 +428,7 @@
                      app.containers.gallery.innerHTML = `<p class="col-span-full text-center text-gray-400">검색 결과가 없습니다.</p>`;
                      return;
                 }
+                log(`Displaying ${filteredData.length} of ${state.allData.length} total entries.`);
 
                 filteredData.forEach(item => {
                     const isSelected = state.comparisonList.has(item.id);
@@ -347,13 +445,23 @@
                             <p class="text-sm text-gray-400">${item.date || '날짜 없음'}</p>
                             <p class="text-sm text-gray-500 truncate">${item.cameraModel || '카메라 정보 없음'}</p>
                         </div>
-                        <div class="absolute top-2 right-2">
+                        <div class="absolute top-2 right-2 flex items-center">
                            <input type="checkbox" class="compare-checkbox h-6 w-6 rounded-md bg-gray-700 border-gray-500 text-blue-500 focus:ring-blue-500" ${isSelected ? 'checked' : ''}>
                         </div>
+                        <button class="delete-btn absolute bottom-2 right-2 bg-red-800/50 hover:bg-red-700 p-2 rounded-full transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg>
+                        </button>
                     `;
                     
                     card.querySelector('.compare-checkbox').addEventListener('click', (e) => { e.stopPropagation(); toggleComparisonItem(item.id); });
-                    card.addEventListener('click', () => { toggleComparisonItem(item.id); });
+                    card.querySelector('.delete-btn').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        openDeleteConfirm(item.id);
+                    });
+                    card.addEventListener('click', (e) => {
+                        if (e.target.closest('.delete-btn')) return;
+                        toggleComparisonItem(item.id);
+                    });
                     app.containers.gallery.appendChild(card);
                 });
             }
@@ -374,6 +482,7 @@
             }
 
             function switchView(viewName) {
+                log(`Switching view to: ${viewName}`);
                 Object.values(app.views).forEach(view => view.classList.add('hidden'));
                 if (app.views[viewName]) {
                     app.views[viewName].classList.remove('hidden');
@@ -383,6 +492,7 @@
             function handleImageUpload(e) {
                 const file = e.target.files[0];
                 if (!file) return;
+                log(`Image selected: ${file.name}, size: ${Math.round(file.size / 1024)} KB`);
 
                 state.originalImageFile = file;
                 state.resizedImageBlob = null;
@@ -392,8 +502,10 @@
 
                 if (file.size <= IMAGE_SIZE_LIMIT) {
                     app.form.previewTitle.textContent = '미리보기 (원본 유지)';
+                    log('Image is under size limit. Will use original.');
                 } else {
                     app.form.previewTitle.textContent = '미리보기 (리사이즈 진행 중...)';
+                    log('Image is over size limit. Resizing...');
                     const img = new Image();
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
@@ -408,6 +520,7 @@
                                 state.resizedImageBlob = blob;
                                 app.form.previewImage.src = URL.createObjectURL(blob);
                                 app.form.previewTitle.textContent = '미리보기 (리사이즈됨)';
+                                log(`Image resized successfully. New size: ${Math.round(blob.size / 1024)} KB`, 'success');
                             });
                     };
                     img.src = URL.createObjectURL(file);
@@ -420,12 +533,8 @@
                     alert('결과물 이미지를 업로드해주세요.');
                     return;
                 }
-                if (!state.githubConfig.token) {
-                    alert('GitHub 연동 설정을 먼저 완료해주세요.');
-                    app.modal.githubSettings.classList.remove('hidden');
-                    return;
-                }
 
+                log('Save process started.');
                 showStatusModal('업로드 시작...', '파일을 GitHub에 업로드합니다.');
 
                 try {
@@ -453,6 +562,7 @@
                         image_original: `assets/originals/${id}${fileExtension}`,
                         image_viewer: needsResize ? `assets/view/${id}.jpg` : `assets/originals/${id}${fileExtension}`
                     };
+                    log(`New entry created with ID: ${id}`);
 
                     // 1. Upload images
                     if (needsResize) {
@@ -472,12 +582,14 @@
                     // 2. Update JSON data
                     updateStatusMessage('데이터베이스 파일 확인 중...');
                     let manifestFile = await getGitHubFile('manifest.json');
-                    let manifest = manifestFile ? JSON.parse(atob(manifestFile.content)) : { files: ['db_1.json'] };
-                    let manifestSha = manifestFile ? manifestFile.sha : null;
+                    let isFirstUpload = manifestFile === null;
+
+                    let manifest = isFirstUpload ? { files: ['db_1.json'] } : JSON.parse(base64ToUnicode(manifestFile.content));
+                    let manifestSha = isFirstUpload ? null : manifestFile.sha;
                     
                     let targetDbFileName = manifest.files[manifest.files.length - 1];
                     let dbFile = await getGitHubFile(targetDbFileName);
-                    let dbContent = dbFile ? atob(dbFile.content) : '[]';
+                    let dbContent = dbFile ? base64ToUnicode(dbFile.content) : '[]';
                     let dbSha = dbFile ? dbFile.sha : null;
                     
                     let dbData = JSON.parse(dbContent);
@@ -490,31 +602,111 @@
                         dbSha = null;
 
                         manifest.files.push(targetDbFileName);
-                        const newManifestContent = btoa(JSON.stringify(manifest, null, 2));
+                        const newManifestContent = unicodeToBase64(JSON.stringify(manifest, null, 2));
                         await uploadToGitHub('manifest.json', newManifestContent, `chore: update manifest for new db file`, manifestSha);
                     } else {
                         dbData.push(newEntry);
+                        if (isFirstUpload) {
+                             updateStatusMessage('manifest.json 생성 중...');
+                             const newManifestContent = unicodeToBase64(JSON.stringify(manifest, null, 2));
+                             await uploadToGitHub('manifest.json', newManifestContent, 'feat: create initial manifest', null);
+                        }
                     }
                     
                     updateStatusMessage(`${targetDbFileName} 업데이트 중...`);
-                    const newDbContent = btoa(JSON.stringify(dbData, null, 2));
+                    const newDbContent = unicodeToBase64(JSON.stringify(dbData, null, 2));
                     await uploadToGitHub(targetDbFileName, newDbContent, `feat: add data for ${id}`, dbSha);
 
                     showStatusModal('업로드 성공!', '모든 파일이 성공적으로 저장되었습니다.', true);
+                    log('Save process completed successfully.', 'success');
 
                 } catch (error) {
-                    console.error('Upload failed:', error);
+                    log(`Save process failed: ${error.message}`, 'error');
                     showStatusModal('업로드 실패', `오류가 발생했습니다: ${error.message}`, true);
+                }
+            }
+
+            function openDeleteConfirm(itemId) {
+                state.itemToDelete = itemId;
+                const item = state.allData.find(i => i.id === itemId);
+                app.modal.deleteConfirmMessage.textContent = `'${item.title}' 항목을 정말 삭제하시겠습니까? 관련된 모든 데이터와 이미지가 GitHub에서 영구적으로 삭제되며, 되돌릴 수 없습니다.`;
+                app.modal.deleteConfirm.classList.remove('hidden');
+                log(`Opened delete confirmation for item: ${itemId}`);
+            }
+
+            async function handleDelete() {
+                const itemId = state.itemToDelete;
+                if (!itemId) return;
+
+                log(`Delete process started for item: ${itemId}`);
+                app.modal.deleteConfirm.classList.add('hidden');
+                showStatusModal('삭제 중...', '파일을 GitHub에서 삭제합니다.');
+
+                try {
+                    const itemToDelete = state.allData.find(i => i.id === itemId);
+                    if (!itemToDelete) throw new Error('Item not found in local data.');
+
+                    // 1. Delete images from GitHub
+                    const hasSeparateOriginal = itemToDelete.image_original && itemToDelete.image_viewer !== itemToDelete.image_original;
+                    
+                    if (hasSeparateOriginal) {
+                        updateStatusMessage('원본 이미지 삭제 중...');
+                        const originalFileInfo = await getGitHubFile(itemToDelete.image_original);
+                        if (originalFileInfo) {
+                            await deleteGitHubFile(itemToDelete.image_original, originalFileInfo.sha, `feat: delete original image for ${itemId}`);
+                        }
+                    }
+                    
+                    updateStatusMessage('뷰어 이미지 삭제 중...');
+                    const viewerFileInfo = await getGitHubFile(itemToDelete.image_viewer);
+                    if (viewerFileInfo) {
+                        await deleteGitHubFile(itemToDelete.image_viewer, viewerFileInfo.sha, `feat: delete viewer image for ${itemId}`);
+                    }
+
+                    // 2. Find which DB file contains the item
+                    let targetDbFileName = null;
+                    for (const fileName of state.manifest.files) {
+                        const dataInFile = JSON.parse(state.dbFileContents[fileName] || '[]');
+                        if (dataInFile.some(item => item.id === itemId)) {
+                            targetDbFileName = fileName;
+                            break;
+                        }
+                    }
+
+                    if (!targetDbFileName) throw new Error(`Could not find DB file for item ${itemId}`);
+                    log(`Item ${itemId} found in ${targetDbFileName}`);
+
+                    // 3. Update the DB file
+                    updateStatusMessage(`${targetDbFileName} 업데이트 중...`);
+                    const dbFile = await getGitHubFile(targetDbFileName);
+                    let dbData = JSON.parse(base64ToUnicode(dbFile.content));
+                    const updatedDbData = dbData.filter(item => item.id !== itemId);
+                    
+                    const newDbContent = unicodeToBase64(JSON.stringify(updatedDbData, null, 2));
+                    await uploadToGitHub(targetDbFileName, newDbContent, `feat: remove data for ${itemId}`, dbFile.sha);
+                    
+                    showStatusModal('삭제 성공!', '항목이 성공적으로 삭제되었습니다.', true);
+                    log(`Delete process for item ${itemId} completed successfully.`, 'success');
+
+                } catch (error) {
+                    log(`Delete process failed: ${error.message}`, 'error');
+                    showStatusModal('삭제 실패', `오류가 발생했습니다: ${error.message}`, true);
+                } finally {
+                    state.itemToDelete = null;
                 }
             }
             
             function renderComparisonView() {
+                log(`Rendering comparison view for ${state.comparisonList.size} items.`);
                 switchView('comparison');
                 app.containers.comparisonGrid.innerHTML = '';
                 
                 state.comparisonList.forEach(id => {
                     const item = state.allData.find(d => d.id === id);
-                    if (!item) return;
+                    if (!item) {
+                        log(`Item with ID ${id} not found for comparison view.`, 'warn');
+                        return;
+                    }
 
                     const itemDiv = document.createElement('div');
                     itemDiv.className = 'bg-gray-800 rounded-lg shadow-lg p-4';
@@ -529,7 +721,7 @@
                         <div class="space-y-1 text-sm text-gray-300">
                             ${Object.entries(item).map(([key, value]) => {
                                 if (['id', 'title', 'image_original', 'image_viewer'].includes(key) || !value) return '';
-                                return `<div class="flex justify-between"><span class="font-semibold text-gray-400">${key}:</span> <span class="text-right">${value}</span></div>`;
+                                return `<div class="flex justify-between"><span class="font-semibold text-gray-400 capitalize">${key.replace(/([A-Z])/g, ' $1')}:</span> <span class="text-right">${value}</span></div>`;
                             }).join('')}
                         </div>
                         ${hasSeparateOriginal ? `<button data-original-src="${originalSrc}" class="view-original-btn mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300">원본 이미지 보기</button>` : ''}
@@ -567,25 +759,6 @@
                 state.resizedImageBlob = null; state.originalImageFile = null;
                 switchView('form');
             });
-
-            app.buttons.settings.addEventListener('click', () => {
-                document.getElementById('githubUser').value = state.githubConfig.user;
-                document.getElementById('githubRepo').value = state.githubConfig.repo;
-                document.getElementById('githubToken').value = state.githubConfig.token;
-                app.modal.githubSettings.classList.remove('hidden');
-            });
-
-            app.modal.githubSettingsForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                state.githubConfig.user = document.getElementById('githubUser').value;
-                state.githubConfig.repo = document.getElementById('githubRepo').value;
-                state.githubConfig.token = document.getElementById('githubToken').value;
-                localStorage.setItem('camSetProGithubConfig', JSON.stringify({ user: state.githubConfig.user, repo: state.githubConfig.repo }));
-                app.modal.githubSettings.classList.add('hidden');
-                init();
-            });
-            
-            app.buttons.cancelSettings.addEventListener('click', () => app.modal.githubSettings.classList.add('hidden'));
             
             app.buttons.cancel.addEventListener('click', () => switchView('dashboard'));
             app.buttons.backToDashboard.addEventListener('click', () => switchView('dashboard'));
@@ -594,10 +767,35 @@
             app.form.formElement.addEventListener('submit', handleSave);
             app.buttons.closeStatusModal.addEventListener('click', () => {
                 app.modal.status.classList.add('hidden');
+                log('Closing status modal and re-initializing.');
                 init();
                 switchView('dashboard');
             });
             app.inputs.search.addEventListener('input', (e) => renderDashboard(e.target.value));
+
+            // Delete confirmation listeners
+            app.buttons.cancelDelete.addEventListener('click', () => {
+                app.modal.deleteConfirm.classList.add('hidden');
+                state.itemToDelete = null;
+            });
+            app.buttons.confirmDelete.addEventListener('click', handleDelete);
+
+            // Debugger event listeners
+            app.debug.toggleHandle.addEventListener('click', () => {
+                const isChecked = app.debug.toggle.checked;
+                app.debug.toggle.checked = !isChecked;
+                state.debugMode = !isChecked;
+                app.debug.container.classList.toggle('hidden', isChecked);
+                document.body.classList.toggle('pb-64', !isChecked);
+                log(`Debug mode ${state.debugMode ? 'ENABLED' : 'DISABLED'}.`);
+            });
+            app.debug.toggle.addEventListener('change', (e) => {
+                state.debugMode = e.target.checked;
+                app.debug.container.classList.toggle('hidden', !state.debugMode);
+                document.body.classList.toggle('pb-64', state.debugMode);
+                log(`Debug mode ${state.debugMode ? 'ENABLED' : 'DISABLED'}.`);
+            });
+
 
             // --- Initial Load ---
             init();
