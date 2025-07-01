@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cam-Set Pro | 카메라 세팅 관리 (v0.10 - Firebase)</title>
+    <title>Cam-Set Pro | 카메라 세팅 관리 (v0.11 - Firebase)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pica/9.0.1/pica.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -34,7 +34,7 @@
 
         <!-- Header -->
         <header class="flex flex-wrap justify-between items-center mb-8 gap-4">
-            <h1 class="text-3xl font-bold text-white">Cam-Set Pro v0.10</h1>
+            <h1 class="text-3xl font-bold text-white">Cam-Set Pro v0.11</h1>
             <div class="flex items-center">
                 <div id="auth-container" class="text-right mr-4">
                     <!-- Auth status will be injected here -->
@@ -143,18 +143,17 @@
     <script type="module">
         // Firebase SDKs
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signInAnonymously, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-storage.js";
 
         // =================================================================================
         // TODO: 여기에 자신의 Firebase 프로젝트의 설정을 붙여넣으세요.
-        // Firebase 콘솔 -> 프로젝트 설정 -> 내 앱 -> SDK 설정 및 구성에서 찾을 수 있습니다.
         const firebaseConfig = {
             apiKey: "AIzaSyCGL7epqiL0Qg_-Rva6oFmRkl8r5Wri_wQ",
             authDomain: "camtest-6267c.firebaseapp.com",
             projectId: "camtest-6267c",
-            storageBucket: "camtest-6267c.firebasestorage.app",
+            storageBucket: "camtest-6267c.appspot.com", // .appspot.com 으로 끝나야 합니다.
             messagingSenderId: "348691096048",
             appId: "1:348691096048:web:ac20cffd88f4dae837bd35"
         };
@@ -165,6 +164,7 @@
         const auth = getAuth(fbApp);
         const db = getFirestore(fbApp);
         const storage = getStorage(fbApp);
+        const googleProvider = new GoogleAuthProvider();
 
         // --- DOM Elements ---
         const app = {
@@ -216,35 +216,51 @@
             originalImageFile: null,
             currentUser: null,
             itemToDelete: null,
-            unsubscribe: null, // To store the Firestore listener
+            unsubscribe: null,
         };
 
         const picaInstance = pica();
         const MAX_IMAGE_WIDTH = 1280;
         const IMAGE_SIZE_LIMIT = 1024 * 1024; // 1MB
+        const ALLOWED_DOMAIN = "ggproduction.net";
 
         // --- Authentication ---
         onAuthStateChanged(auth, user => {
-            state.currentUser = user;
             if (user) {
-                console.log("User is signed in:", user.uid);
-                app.containers.auth.innerHTML = `
-                    <p class="text-sm text-gray-400">UID: ${user.uid.substring(0, 8)}...</p>
-                    <button id="logoutBtn" class="text-xs text-blue-400 hover:underline">로그아웃</button>
-                `;
-                document.getElementById('logoutBtn').addEventListener('click', () => signOut(auth));
-                loadData();
+                // Check if the user's email domain is allowed
+                if (user.email && user.email.endsWith(`@${ALLOWED_DOMAIN}`)) {
+                    state.currentUser = user;
+                    console.log("Authorized user signed in:", user.displayName, user.email);
+                    app.containers.auth.innerHTML = `
+                        <div class="flex items-center">
+                            <img src="${user.photoURL}" alt="${user.displayName}" class="w-8 h-8 rounded-full mr-2">
+                            <div>
+                                <p class="text-sm font-semibold">${user.displayName}</p>
+                                <button id="logoutBtn" class="text-xs text-blue-400 hover:underline">로그아웃</button>
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('logoutBtn').addEventListener('click', () => signOut(auth));
+                    loadData();
+                } else {
+                    // If not an allowed domain, sign them out
+                    console.warn("Unauthorized user domain:", user.email);
+                    alert(`접근이 거부되었습니다. ${ALLOWED_DOMAIN} 계정만 사용할 수 있습니다.`);
+                    signOut(auth);
+                }
             } else {
+                // User is signed out
+                state.currentUser = null;
                 console.log("User is signed out.");
                 app.containers.auth.innerHTML = `
-                    <button id="loginBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">익명 로그인</button>
+                    <button id="loginBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Google 계정으로 로그인</button>
                 `;
-                document.getElementById('loginBtn').addEventListener('click', () => signInAnonymously(auth));
+                document.getElementById('loginBtn').addEventListener('click', () => signInWithPopup(auth, googleProvider));
                 app.containers.gallery.innerHTML = '';
                 app.containers.loading.classList.add('hidden');
                 app.containers.noData.classList.remove('hidden');
                 app.containers.noData.querySelector('p').textContent = '데이터를 보려면 로그인해주세요.';
-                if (state.unsubscribe) state.unsubscribe(); // Stop listening to data if logged out
+                if (state.unsubscribe) state.unsubscribe();
             }
         });
 
@@ -255,7 +271,6 @@
             
             const testsCollection = collection(db, "camera_tests");
             
-            // Listen for real-time updates
             state.unsubscribe = onSnapshot(testsCollection, (querySnapshot) => {
                 state.allData = [];
                 querySnapshot.forEach((doc) => {
@@ -283,7 +298,8 @@
                     item.lens?.toLowerCase().includes(searchTerm) ||
                     item.sceneDesc?.toLowerCase().includes(searchTerm)
                 );
-            }).sort((a, b) => new Date(b.date) - new Date(a.date));
+            }).sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
+
 
             if (filteredData.length === 0 && state.allData.length > 0) {
                  app.containers.gallery.innerHTML = `<p class="col-span-full text-center text-gray-400">검색 결과가 없습니다.</p>`;
@@ -306,16 +322,22 @@
                     <div class="absolute top-2 right-2 flex items-center">
                        <input type="checkbox" class="compare-checkbox h-6 w-6 rounded-md bg-gray-700 border-gray-500 text-blue-500 focus:ring-blue-500" ${isSelected ? 'checked' : ''}>
                     </div>
+                    ${item.owner === state.currentUser?.uid ? `
                     <button class="delete-btn absolute bottom-2 right-2 bg-red-800/50 hover:bg-red-700 p-2 rounded-full transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg>
-                    </button>
+                    </button>` : ''}
                 `;
                 
                 card.querySelector('.compare-checkbox').addEventListener('click', (e) => { e.stopPropagation(); toggleComparisonItem(item.id); });
-                card.querySelector('.delete-btn').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    openDeleteConfirm(item.id);
-                });
+                
+                const deleteBtn = card.querySelector('.delete-btn');
+                if (deleteBtn) {
+                    deleteBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        openDeleteConfirm(item.id);
+                    });
+                }
+
                 card.addEventListener('click', (e) => {
                     if (e.target.closest('.delete-btn')) return;
                     toggleComparisonItem(item.id);
@@ -400,30 +422,36 @@
                 const needsResize = state.originalImageFile.size > IMAGE_SIZE_LIMIT;
                 
                 let viewerImageUrl, originalImageUrl;
+                let storage_path_viewer, storage_path_original;
 
                 // 1. Upload images to Firebase Storage
                 if (needsResize) {
                     updateStatusMessage('리사이즈된 이미지 업로드 중...');
-                    const resizedImageRef = ref(storage, `images/${id}.jpg`);
+                    storage_path_viewer = `images/${id}.jpg`;
+                    const resizedImageRef = ref(storage, storage_path_viewer);
                     await uploadBytes(resizedImageRef, state.resizedImageBlob);
                     viewerImageUrl = await getDownloadURL(resizedImageRef);
 
                     updateStatusMessage('원본 이미지 업로드 중...');
-                    const originalImageRef = ref(storage, `images/${id}_original${fileExtension}`);
+                    storage_path_original = `images/${id}_original${fileExtension}`;
+                    const originalImageRef = ref(storage, storage_path_original);
                     await uploadBytes(originalImageRef, state.originalImageFile);
                     originalImageUrl = await getDownloadURL(originalImageRef);
                 } else {
                     updateStatusMessage('원본 이미지 업로드 중...');
-                    const imageRef = ref(storage, `images/${id}${fileExtension}`);
+                    storage_path_original = `images/${id}${fileExtension}`;
+                    const imageRef = ref(storage, storage_path_original);
                     await uploadBytes(imageRef, state.originalImageFile);
                     viewerImageUrl = await getDownloadURL(imageRef);
-                    originalImageUrl = viewerImageUrl; // Same URL for both
+                    originalImageUrl = viewerImageUrl;
+                    storage_path_viewer = storage_path_original;
                 }
 
                 // 2. Save data to Firestore
                 updateStatusMessage('데이터베이스에 저장 중...');
                 const newEntry = {
                     owner: state.currentUser.uid,
+                    ownerName: state.currentUser.displayName,
                     createdAt: new Date(),
                     date: document.getElementById('date').value || new Date().toISOString().split('T')[0],
                     title: document.getElementById('title').value,
@@ -440,8 +468,8 @@
                     ndFilter: document.getElementById('ndFilter').value,
                     image_original: originalImageUrl,
                     image_viewer: viewerImageUrl,
-                    storage_path_original: needsResize ? `images/${id}_original${fileExtension}` : `images/${id}${fileExtension}`,
-                    storage_path_viewer: `images/${id}.jpg`
+                    storage_path_original,
+                    storage_path_viewer
                 };
                 
                 await addDoc(collection(db, "camera_tests"), newEntry);
@@ -472,8 +500,6 @@
                 const itemToDelete = state.allData.find(i => i.id === itemId);
                 if (!itemToDelete) throw new Error('Item not found in local data.');
                 
-                // Firestore 보안 규칙으로 소유자만 삭제 가능하게 설정하는 것이 이상적입니다.
-                // 여기서는 클라이언트에서 소유자 확인을 간단히 추가합니다.
                 if (itemToDelete.owner !== state.currentUser.uid) {
                     throw new Error("자신이 등록한 항목만 삭제할 수 있습니다.");
                 }
@@ -521,7 +547,7 @@
                     <h3 class="font-bold text-xl mb-2">${item.title}</h3>
                     <div class="space-y-1 text-sm text-gray-300">
                         ${Object.entries(item).map(([key, value]) => {
-                            if (['id', 'owner', 'createdAt', 'image_original', 'image_viewer', 'storage_path_original', 'storage_path_viewer'].includes(key) || !value) return '';
+                            if (['id', 'owner', 'ownerName', 'createdAt', 'image_original', 'image_viewer', 'storage_path_original', 'storage_path_viewer'].includes(key) || !value) return '';
                             return `<div class="flex justify-between"><span class="font-semibold text-gray-400 capitalize">${key.replace(/([A-Z])/g, ' $1')}:</span> <span class="text-right">${value}</span></div>`;
                         }).join('')}
                     </div>
