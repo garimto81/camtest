@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cam-Set Pro | 카메라 세팅 관리</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pica/9.0.1/pica.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .hidden { display: none; }
+        .modal-bg {
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        .card-hover-glow {
+            transition: box-shadow 0.3s ease-in-out;
+        }
+        .card-hover-glow:hover {
+            box-shadow: 0 0 15px 5px rgba(59, 130, 246, 0.4);
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200">
+
+    <!-- App Container -->
+    <div id="app" class="container mx-auto p-4 md:p-8">
+
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold text-white">Cam-Set Pro</h1>
+            <div>
+                <button id="compareBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 disabled:bg-gray-500 disabled:cursor-not-allowed" disabled>비교하기</button>
+                <button id="newTestBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 ml-2">새 테스트 추가</button>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main id="mainContent">
+            <!-- Dashboard View -->
+            <div id="dashboardView">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-semibold">테스트 라이브러리</h2>
+                    <input type="text" id="searchInput" placeholder="제목, 카메라, 렌즈 등으로 검색..." class="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 w-1/3 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div id="gallery" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                    <!-- Gallery items will be injected here -->
+                </div>
+                <div id="loading" class="flex justify-center items-center mt-10">
+                    <div class="loader"></div>
+                    <p class="ml-4 text-lg">데이터를 불러오는 중...</p>
+                </div>
+                 <div id="no-data" class="text-center py-16 hidden">
+                    <p class="text-xl text-gray-400">저장된 테스트 데이터가 없습니다.</p>
+                    <p class="text-gray-500 mt-2">`manifest.json`과 `db_1.json` 파일이 올바르게 설정되었는지 확인해주세요.</p>
+                </div>
+            </div>
+
+            <!-- Form View -->
+            <div id="formView" class="hidden">
+                <h2 id="formTitle" class="text-2xl font-semibold mb-6">새 테스트 데이터 입력</h2>
+                <form id="testForm" class="bg-gray-800 p-8 rounded-lg shadow-xl space-y-6">
+                    <!-- Basic Info -->
+                    <fieldset class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <legend class="text-lg font-medium text-white mb-2">기본 정보</legend>
+                        <input type="hidden" id="entryId">
+                        <input type="text" id="title" placeholder="테스트 제목 (예: 핸드 클로즈업 샷)" class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        <input type="text" id="director" placeholder="촬영 감독" class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <input type="date" id="date" class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-400" required>
+                        <textarea id="sceneDesc" placeholder="장면 상세 설명" rows="3" class="md:col-span-2 bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                    </fieldset>
+
+                    <!-- Camera Info -->
+                    <fieldset class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <legend class="text-lg font-medium text-white mb-2">카메라 정보</legend>
+                        <input type="text" id="cameraModel" placeholder="카메라 모델 (예: Sony FX3)" class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        <input type="text" id="lens" placeholder="렌즈 (예: 24-70mm GM II)" class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </fieldset>
+                    
+                    <!-- Core Settings -->
+                    <fieldset class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                        <legend class="text-lg font-medium text-white mb-2 col-span-full">핵심 세팅</legend>
+                        <input type="number" id="iso" placeholder="ISO" class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <input type="text" id="aperture" placeholder="Aperture (F-stop)" class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <input type="text" id="shutterSpeed" placeholder="Shutter Speed" class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <input type="text" id="whiteBalance" placeholder="White Balance (K)" class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <input type="text" id="pictureProfile" placeholder="Picture Profile" class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <input type="text" id="focusDistance" placeholder="Focus Distance" class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <input type="text" id="ndFilter" placeholder="ND Filter" class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </fieldset>
+
+                    <!-- Image Upload -->
+                    <fieldset>
+                        <legend class="text-lg font-medium text-white mb-2">결과물 이미지</legend>
+                        <input type="file" id="imageUpload" accept="image/jpeg, image/png" class="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" required>
+                        <div id="imagePreviewContainer" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
+                            <div>
+                                <h4 class="text-center font-semibold">원본</h4>
+                                <img id="originalPreview" class="mt-2 rounded-lg w-full h-auto object-contain">
+                            </div>
+                            <div>
+                                <h4 class="text-center font-semibold">뷰어용 (리사이즈됨)</h4>
+                                <img id="resizedPreview" class="mt-2 rounded-lg w-full h-auto object-contain">
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <!-- Actions -->
+                    <div class="flex justify-end space-x-4 pt-4">
+                        <button type="button" id="cancelBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-lg transition duration-300">취소</button>
+                        <button type="submit" id="saveBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition duration-300">저장</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Comparison View -->
+            <div id="comparisonView" class="hidden">
+                 <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-semibold">세팅 비교</h2>
+                    <button id="backToDashboardBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300">돌아가기</button>
+                </div>
+                <div id="comparisonGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Comparison items will be injected here -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal for Save Instructions -->
+    <div id="saveModal" class="fixed inset-0 z-50 flex items-center justify-center modal-bg hidden">
+        <div class="bg-gray-800 rounded-lg shadow-2xl p-8 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <h3 class="text-2xl font-bold text-white mb-4">데이터 저장 안내</h3>
+            <p class="text-gray-300 mb-6">아래 단계에 따라 GitHub 저장소를 직접 업데이트해주세요.</p>
+            
+            <div class="space-y-6">
+                <!-- Step 1: Download Images -->
+                <div>
+                    <h4 class="font-semibold text-lg text-blue-400 mb-2">1단계: 이미지 파일 저장</h4>
+                    <p class="text-sm text-gray-400 mb-3">아래 버튼을 눌러 리사이즈된 이미지를 다운로드하고, 원본 이미지와 함께 지정된 경로에 저장하세요.</p>
+                    <div class="bg-gray-900 p-4 rounded-lg">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p>리사이즈된 이미지: <code id="resizedImagePath" class="text-yellow-400"></code></p>
+                                <p class="text-xs text-gray-500">이 파일을 다운로드하여 위 경로에 저장하세요.</p>
+                            </div>
+                            <a id="downloadResizedBtn" href="#" download="" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300">다운로드</a>
+                        </div>
+                        <hr class="border-gray-700 my-3">
+                        <div>
+                            <p>원본 이미지: <code id="originalImagePath" class="text-yellow-400"></code></p>
+                            <p class="text-xs text-gray-500">가지고 있는 원본 파일을 위 경로와 파일명으로 저장하세요.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Update JSON -->
+                <div>
+                    <h4 class="font-semibold text-lg text-blue-400 mb-2">2단계: 데이터베이스(JSON) 업데이트</h4>
+                    <p class="text-sm text-gray-400 mb-3">아래 텍스트를 복사하여 <code id="dbFileName" class="text-yellow-400"></code> 파일의 내용을 업데이트하거나 새로 생성하세요.</p>
+                    <textarea id="jsonOutput" rows="8" class="w-full bg-gray-900 text-gray-300 p-3 rounded-lg border border-gray-700 font-mono text-sm"></textarea>
+                </div>
+
+                <!-- Step 3: Update Manifest (if needed) -->
+                <div id="manifestUpdateSection" class="hidden">
+                    <h4 class="font-semibold text-lg text-blue-400 mb-2">3단계: Manifest 파일 업데이트</h4>
+                    <p class="text-sm text-gray-400 mb-3">새로운 데이터 파일이 생성되었습니다. `manifest.json` 파일의 내용을 아래 텍스트로 교체해주세요.</p>
+                    <textarea id="manifestOutput" rows="3" class="w-full bg-gray-900 text-gray-300 p-3 rounded-lg border border-gray-700 font-mono text-sm"></textarea>
+                </div>
+            </div>
+
+            <div class="mt-8 text-right">
+                <button id="closeModalBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition duration-300">완료</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal for Original Image View -->
+    <div id="originalImageViewModal" class="fixed inset-0 z-50 flex items-center justify-center modal-bg hidden" onclick="this.classList.add('hidden')">
+        <img id="originalImageContent" src="" alt="Original Image" class="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl">
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM Elements ---
+            const app = {
+                views: {
+                    dashboard: document.getElementById('dashboardView'),
+                    form: document.getElementById('formView'),
+                    comparison: document.getElementById('comparisonView'),
+                },
+                buttons: {
+                    newTest: document.getElementById('newTestBtn'),
+                    compare: document.getElementById('compareBtn'),
+                    cancel: document.getElementById('cancelBtn'),
+                    save: document.getElementById('saveBtn'),
+                    backToDashboard: document.getElementById('backToDashboardBtn'),
+                    closeModal: document.getElementById('closeModalBtn'),
+                    downloadResized: document.getElementById('downloadResizedBtn'),
+                },
+                containers: {
+                    gallery: document.getElementById('gallery'),
+                    comparisonGrid: document.getElementById('comparisonGrid'),
+                    loading: document.getElementById('loading'),
+                    noData: document.getElementById('no-data'),
+                },
+                form: {
+                    formElement: document.getElementById('testForm'),
+                    title: document.getElementById('formTitle'),
+                    entryId: document.getElementById('entryId'),
+                    imageUpload: document.getElementById('imageUpload'),
+                    imagePreviewContainer: document.getElementById('imagePreviewContainer'),
+                    originalPreview: document.getElementById('originalPreview'),
+                    resizedPreview: document.getElementById('resizedPreview'),
+                },
+                modal: {
+                    save: document.getElementById('saveModal'),
+                    originalImage: document.getElementById('originalImageViewModal'),
+                    originalImageContent: document.getElementById('originalImageContent'),
+                    jsonOutput: document.getElementById('jsonOutput'),
+                    dbFileName: document.getElementById('dbFileName'),
+                    resizedImagePath: document.getElementById('resizedImagePath'),
+                    originalImagePath: document.getElementById('originalImagePath'),
+                    manifestUpdateSection: document.getElementById('manifestUpdateSection'),
+                    manifestOutput: document.getElementById('manifestOutput'),
+                },
+                inputs: {
+                    search: document.getElementById('searchInput'),
+                }
+            };
+
+            // --- State ---
+            let state = {
+                allData: [],
+                dbFileContents: {}, // { 'db_1.json': '...' }
+                manifest: null,
+                comparisonList: new Set(),
+                currentView: 'dashboard',
+                resizedImageBlob: null,
+                originalImageFile: null,
+            };
+
+            const picaInstance = pica();
+            const MAX_IMAGE_WIDTH = 1280; // For viewer image
+            const DB_FILE_SIZE_LIMIT = 900 * 1024; // 900 KB
+
+            // --- Functions ---
+
+            /**
+             * Fetches data from a given URL
+             * @param {string} url - The URL to fetch
+             * @returns {Promise<any>} - The JSON response
+             */
+            async function fetchData(url) {
+                try {
+                    const response = await fetch(url, { cache: "no-store" });
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status} for ${url}`);
+                    }
+                    return await response.json();
+                } catch (error) {
+                    console.error(`Failed to fetch ${url}:`, error);
+                    app.containers.loading.classList.add('hidden');
+                    app.containers.noData.classList.remove('hidden');
+                    return null;
+                }
+            }
+            
+            /**
+             * Fetches text content from a given URL
+             * @param {string} url - The URL to fetch
+             * @returns {Promise<string>} - The text response
+             */
+            async function fetchText(url) {
+                 try {
+                    const response = await fetch(url, { cache: "no-store" });
+                    if (!response.ok) return ""; // Return empty string if file not found, e.g., new db file
+                    return await response.text();
+                } catch (error) {
+                    console.error(`Failed to fetch text from ${url}:`, error);
+                    return "";
+                }
+            }
+
+            /**
+             * Initializes the application
+             */
+            async function init() {
+                app.containers.loading.classList.remove('hidden');
+                app.containers.gallery.innerHTML = '';
+                
+                const manifest = await fetchData('manifest.json');
+                if (!manifest || !manifest.files || manifest.files.length === 0) {
+                    app.containers.loading.classList.add('hidden');
+                    app.containers.noData.classList.remove('hidden');
+                    // Initialize with empty manifest if not found
+                    state.manifest = { files: ['db_1.json'] };
+                    state.dbFileContents['db_1.json'] = '[]';
+                    state.allData = [];
+                    renderDashboard();
+                    return;
+                }
+                state.manifest = manifest;
+
+                let allData = [];
+                for (const fileName of manifest.files) {
+                    const fileContent = await fetchText(fileName);
+                    state.dbFileContents[fileName] = fileContent;
+                    try {
+                        const data = JSON.parse(fileContent || '[]');
+                        allData = allData.concat(data);
+                    } catch(e) {
+                        console.error(`Error parsing JSON from ${fileName}:`, e);
+                    }
+                }
+                
+                state.allData = allData;
+                renderDashboard();
+                app.containers.loading.classList.add('hidden');
+                if(state.allData.length === 0) {
+                    app.containers.noData.classList.remove('hidden');
+                }
+            }
+
+            /**
+             * Renders the dashboard view with gallery items
+             */
+            function renderDashboard(filter = '') {
+                app.containers.gallery.innerHTML = '';
+                const filteredData = state.allData.filter(item => {
+                    const searchTerm = filter.toLowerCase();
+                    return (
+                        item.title?.toLowerCase().includes(searchTerm) ||
+                        item.cameraModel?.toLowerCase().includes(searchTerm) ||
+                        item.lens?.toLowerCase().includes(searchTerm) ||
+                        item.sceneDesc?.toLowerCase().includes(searchTerm)
+                    );
+                });
+
+                if (filteredData.length === 0 && state.allData.length > 0) {
+                     app.containers.gallery.innerHTML = `<p class="col-span-full text-center text-gray-400">검색 결과가 없습니다.</p>`;
+                     return;
+                }
+
+                filteredData.forEach(item => {
+                    const isSelected = state.comparisonList.has(item.id);
+                    const card = document.createElement('div');
+                    card.className = `bg-gray-800 rounded-lg overflow-hidden shadow-lg transform hover:-translate-y-1 transition-all duration-300 card-hover-glow cursor-pointer border-2 ${isSelected ? 'border-blue-500' : 'border-transparent'}`;
+                    card.dataset.id = item.id;
+                    
+                    card.innerHTML = `
+                        <img src="${item.image_viewer || 'https://placehold.co/600x400/1f2937/9ca3af?text=No+Image'}" alt="${item.title}" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/1f2937/9ca3af?text=Image+Error';">
+                        <div class="p-4">
+                            <h3 class="font-bold text-lg truncate">${item.title}</h3>
+                            <p class="text-sm text-gray-400">${item.date}</p>
+                            <p class="text-sm text-gray-500 truncate">${item.cameraModel}</p>
+                        </div>
+                        <div class="absolute top-2 right-2">
+                           <input type="checkbox" class="compare-checkbox h-6 w-6 rounded-md bg-gray-700 border-gray-500 text-blue-500 focus:ring-blue-500" ${isSelected ? 'checked' : ''}>
+                        </div>
+                    `;
+                    
+                    card.querySelector('.compare-checkbox').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        toggleComparisonItem(item.id);
+                    });
+
+                    card.addEventListener('click', () => {
+                        toggleComparisonItem(item.id);
+                    });
+                    
+                    app.containers.gallery.appendChild(card);
+                });
+            }
+            
+            /**
+             * Toggles an item in the comparison list
+             * @param {string} id - The ID of the item to toggle
+             */
+            function toggleComparisonItem(id) {
+                const card = app.containers.gallery.querySelector(`[data-id="${id}"]`);
+                const checkbox = card.querySelector('.compare-checkbox');
+
+                if (state.comparisonList.has(id)) {
+                    state.comparisonList.delete(id);
+                    card.classList.remove('border-blue-500');
+                    checkbox.checked = false;
+                } else {
+                    state.comparisonList.add(id);
+                    card.classList.add('border-blue-500');
+                    checkbox.checked = true;
+                }
+                app.buttons.compare.disabled = state.comparisonList.size === 0;
+            }
+
+            /**
+             * Switches the visible view
+             * @param {string} viewName - The name of the view to show ('dashboard', 'form', 'comparison')
+             */
+            function switchView(viewName) {
+                Object.values(app.views).forEach(view => view.classList.add('hidden'));
+                if (app.views[viewName]) {
+                    app.views[viewName].classList.remove('hidden');
+                    state.currentView = viewName;
+                }
+            }
+
+            /**
+             * Handles image upload and generates previews
+             * @param {Event} e - The file input change event
+             */
+            function handleImageUpload(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                state.originalImageFile = file;
+
+                // Show original preview
+                const originalReader = new FileReader();
+                originalReader.onload = (event) => {
+                    app.form.originalPreview.src = event.target.result;
+                };
+                originalReader.readAsDataURL(file);
+
+                // Show resized preview
+                const canvas = document.createElement('canvas');
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const targetWidth = Math.min(MAX_IMAGE_WIDTH, img.width);
+                        const targetHeight = (img.height / img.width) * targetWidth;
+                        canvas.width = targetWidth;
+                        canvas.height = targetHeight;
+                        
+                        picaInstance.resize(img, canvas)
+                            .then(result => picaInstance.toBlob(result, 'image/jpeg', 0.9))
+                            .then(blob => {
+                                state.resizedImageBlob = blob;
+                                app.form.resizedPreview.src = URL.createObjectURL(blob);
+                            });
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+
+                app.form.imagePreviewContainer.classList.remove('hidden');
+            }
+
+            /**
+             * Handles form submission
+             * @param {Event} e - The form submit event
+             */
+            function handleSave(e) {
+                e.preventDefault();
+                if (!state.resizedImageBlob || !state.originalImageFile) {
+                    alert('결과물 이미지를 업로드해주세요.');
+                    return;
+                }
+
+                const id = document.getElementById('entryId').value || `test-${Date.now()}`;
+                const originalFileName = state.originalImageFile.name;
+                const fileExtension = originalFileName.slice(originalFileName.lastIndexOf('.'));
+                
+                const newEntry = {
+                    id: id,
+                    date: document.getElementById('date').value,
+                    title: document.getElementById('title').value,
+                    director: document.getElementById('director').value,
+                    sceneDesc: document.getElementById('sceneDesc').value,
+                    cameraModel: document.getElementById('cameraModel').value,
+                    lens: document.getElementById('lens').value,
+                    iso: document.getElementById('iso').value,
+                    aperture: document.getElementById('aperture').value,
+                    shutterSpeed: document.getElementById('shutterSpeed').value,
+                    whiteBalance: document.getElementById('whiteBalance').value,
+                    pictureProfile: document.getElementById('pictureProfile').value,
+                    focusDistance: document.getElementById('focusDistance').value,
+                    ndFilter: document.getElementById('ndFilter').value,
+                    image_original: `assets/originals/${id}${fileExtension}`,
+                    image_viewer: `assets/view/${id}.jpg` // Resized is always jpg
+                };
+                
+                // Prepare data for modal
+                app.buttons.downloadResized.href = URL.createObjectURL(state.resizedImageBlob);
+                app.buttons.downloadResized.download = `${id}.jpg`;
+                
+                app.modal.resizedImagePath.textContent = newEntry.image_viewer;
+                app.modal.originalImagePath.textContent = newEntry.image_original;
+
+                // --- JSON Splitting Logic ---
+                let targetDbFileName = state.manifest.files[state.manifest.files.length - 1];
+                let currentDbContent = state.dbFileContents[targetDbFileName] || '[]';
+                let currentDbData = JSON.parse(currentDbContent);
+
+                const newEntryString = JSON.stringify(newEntry, null, 2);
+
+                // Check if adding the new entry exceeds the size limit
+                if (new Blob([currentDbContent, newEntryString]).size > DB_FILE_SIZE_LIMIT) {
+                    const newFileIndex = state.manifest.files.length + 1;
+                    targetDbFileName = `db_${newFileIndex}.json`;
+                    
+                    // Update manifest and show the update section
+                    state.manifest.files.push(targetDbFileName);
+                    app.modal.manifestUpdateSection.classList.remove('hidden');
+                    app.modal.manifestOutput.value = JSON.stringify(state.manifest, null, 2);
+                    
+                    // The new file will only contain the new entry
+                    currentDbData = [newEntry];
+                } else {
+                    currentDbData.push(newEntry);
+                    app.modal.manifestUpdateSection.classList.add('hidden');
+                }
+                
+                app.modal.dbFileName.textContent = targetDbFileName;
+                app.modal.jsonOutput.value = JSON.stringify(currentDbData, null, 2);
+
+                app.modal.save.classList.remove('hidden');
+            }
+
+            /**
+             * Renders the comparison view
+             */
+            function renderComparisonView() {
+                switchView('comparison');
+                app.containers.comparisonGrid.innerHTML = '';
+                
+                state.comparisonList.forEach(id => {
+                    const item = state.allData.find(d => d.id === id);
+                    if (!item) return;
+
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'bg-gray-800 rounded-lg shadow-lg p-4';
+                    itemDiv.innerHTML = `
+                        <img src="${item.image_viewer}" alt="${item.title}" class="w-full h-64 object-cover rounded-md mb-4" onerror="this.onerror=null;this.src='https://placehold.co/600x400/1f2937/9ca3af?text=Image+Error';">
+                        <h3 class="font-bold text-xl mb-2">${item.title}</h3>
+                        <div class="space-y-1 text-sm text-gray-300">
+                            ${Object.entries(item).map(([key, value]) => {
+                                if (['id', 'title', 'image_original', 'image_viewer'].includes(key) || !value) return '';
+                                return `<div class="flex justify-between"><span class="font-semibold text-gray-400">${key}:</span> <span class="text-right">${value}</span></div>`;
+                            }).join('')}
+                        </div>
+                        <button data-original-src="${item.image_original}" class="view-original-btn mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300">원본 이미지 보기</button>
+                    `;
+                    app.containers.comparisonGrid.appendChild(itemDiv);
+                });
+
+                document.querySelectorAll('.view-original-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const src = e.target.dataset.originalSrc;
+                        app.modal.originalImageContent.src = src;
+                        app.modal.originalImage.classList.remove('hidden');
+                    });
+                });
+            }
+
+            // --- Event Listeners ---
+            app.buttons.newTest.addEventListener('click', () => {
+                app.form.formElement.reset();
+                app.form.title.textContent = '새 테스트 데이터 입력';
+                app.form.entryId.value = '';
+                app.form.imagePreviewContainer.classList.add('hidden');
+                state.resizedImageBlob = null;
+                state.originalImageFile = null;
+                switchView('form');
+            });
+            
+            app.buttons.cancel.addEventListener('click', () => switchView('dashboard'));
+            app.buttons.backToDashboard.addEventListener('click', () => switchView('dashboard'));
+            
+            app.buttons.compare.addEventListener('click', () => {
+                if (state.comparisonList.size > 0) {
+                    renderComparisonView();
+                }
+            });
+
+            app.form.imageUpload.addEventListener('change', handleImageUpload);
+            app.form.formElement.addEventListener('submit', handleSave);
+            
+            app.buttons.closeModal.addEventListener('click', () => {
+                app.modal.save.classList.add('hidden');
+                // Reload data to reflect potential changes
+                init();
+                switchView('dashboard');
+            });
+            
+            app.inputs.search.addEventListener('input', (e) => {
+                renderDashboard(e.target.value);
+            });
+
+            // --- Initial Load ---
+            init();
+        });
+    </script>
+</body>
+</html>
