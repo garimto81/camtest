@@ -70,5 +70,23 @@
     "ndFilter": "",
     "image_original": "assets/originals/test-1751358169740.png",
     "image_viewer": "assets/view/test-1751358169740.jpg"
+  },
+  {
+    "id": "test-1751358391369",
+    "date": "2025-07-01",
+    "title": "테스트01",
+    "director": "",
+    "sceneDesc": "",
+    "cameraModel": "",
+    "lens": "",
+    "iso": "",
+    "aperture": "",
+    "shutterSpeed": "",
+    "whiteBalance": "",
+    "pictureProfile": "",
+    "focusDistance": "",
+    "ndFilter": "",
+    "image_original": "assets/originals/test-1751358391369.png",
+    "image_viewer": "assets/view/test-1751358391369.jpg"
   }
 ]
