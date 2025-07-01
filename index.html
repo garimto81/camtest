@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cam-Set Pro | 카메라 세팅 관리 (v0.11 - Firebase)</title>
+    <title>Cam-Set Pro | 카메라 세팅 관리 (v0.12 - Firebase)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pica/9.0.1/pica.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -34,7 +34,7 @@
 
         <!-- Header -->
         <header class="flex flex-wrap justify-between items-center mb-8 gap-4">
-            <h1 class="text-3xl font-bold text-white">Cam-Set Pro v0.11</h1>
+            <h1 class="text-3xl font-bold text-white">Cam-Set Pro v0.12</h1>
             <div class="flex items-center">
                 <div id="auth-container" class="text-right mr-4">
                     <!-- Auth status will be injected here -->
@@ -143,7 +143,7 @@
     <script type="module">
         // Firebase SDKs
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-        import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-storage.js";
 
@@ -225,44 +225,53 @@
         const ALLOWED_DOMAIN = "ggproduction.net";
 
         // --- Authentication ---
-        onAuthStateChanged(auth, user => {
-            if (user) {
-                // Check if the user's email domain is allowed
-                if (user.email && user.email.endsWith(`@${ALLOWED_DOMAIN}`)) {
-                    state.currentUser = user;
-                    console.log("Authorized user signed in:", user.displayName, user.email);
-                    app.containers.auth.innerHTML = `
-                        <div class="flex items-center">
-                            <img src="${user.photoURL}" alt="${user.displayName}" class="w-8 h-8 rounded-full mr-2">
-                            <div>
-                                <p class="text-sm font-semibold">${user.displayName}</p>
-                                <button id="logoutBtn" class="text-xs text-blue-400 hover:underline">로그아웃</button>
-                            </div>
-                        </div>
-                    `;
-                    document.getElementById('logoutBtn').addEventListener('click', () => signOut(auth));
-                    loadData();
-                } else {
-                    // If not an allowed domain, sign them out
-                    console.warn("Unauthorized user domain:", user.email);
-                    alert(`접근이 거부되었습니다. ${ALLOWED_DOMAIN} 계정만 사용할 수 있습니다.`);
-                    signOut(auth);
-                }
-            } else {
-                // User is signed out
-                state.currentUser = null;
-                console.log("User is signed out.");
-                app.containers.auth.innerHTML = `
-                    <button id="loginBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Google 계정으로 로그인</button>
-                `;
-                document.getElementById('loginBtn').addEventListener('click', () => signInWithPopup(auth, googleProvider));
-                app.containers.gallery.innerHTML = '';
-                app.containers.loading.classList.add('hidden');
-                app.containers.noData.classList.remove('hidden');
-                app.containers.noData.querySelector('p').textContent = '데이터를 보려면 로그인해주세요.';
-                if (state.unsubscribe) state.unsubscribe();
-            }
-        });
+        setPersistence(auth, browserLocalPersistence)
+            .then(() => {
+                console.log("Login persistence set to local.");
+                // Now that persistence is set, listen for auth state changes.
+                onAuthStateChanged(auth, user => {
+                    if (user) {
+                        // Check if the user's email domain is allowed
+                        if (user.email && user.email.endsWith(`@${ALLOWED_DOMAIN}`)) {
+                            state.currentUser = user;
+                            console.log("Authorized user signed in:", user.displayName, user.email);
+                            app.containers.auth.innerHTML = `
+                                <div class="flex items-center">
+                                    <img src="${user.photoURL}" alt="${user.displayName}" class="w-8 h-8 rounded-full mr-2">
+                                    <div>
+                                        <p class="text-sm font-semibold">${user.displayName}</p>
+                                        <button id="logoutBtn" class="text-xs text-blue-400 hover:underline">로그아웃</button>
+                                    </div>
+                                </div>
+                            `;
+                            document.getElementById('logoutBtn').addEventListener('click', () => signOut(auth));
+                            loadData();
+                        } else {
+                            // If not an allowed domain, sign them out
+                            console.warn("Unauthorized user domain:", user.email);
+                            alert(`접근이 거부되었습니다. ${ALLOWED_DOMAIN} 계정만 사용할 수 있습니다.`);
+                            signOut(auth);
+                        }
+                    } else {
+                        // User is signed out
+                        state.currentUser = null;
+                        console.log("User is signed out.");
+                        app.containers.auth.innerHTML = `
+                            <button id="loginBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Google 계정으로 로그인</button>
+                        `;
+                        document.getElementById('loginBtn').addEventListener('click', () => signInWithPopup(auth, googleProvider));
+                        app.containers.gallery.innerHTML = '';
+                        app.containers.loading.classList.add('hidden');
+                        app.containers.noData.classList.remove('hidden');
+                        app.containers.noData.querySelector('p').textContent = '데이터를 보려면 로그인해주세요.';
+                        if (state.unsubscribe) state.unsubscribe();
+                    }
+                });
+            })
+            .catch((error) => {
+                console.error("Error setting persistence: ", error);
+            });
+
 
         // --- Core Application Functions ---
         function loadData() {
@@ -610,4 +619,4 @@
         app.buttons.confirmDelete.addEventListener('click', handleDelete);
     </script>
 </body>
-</html>
+</ht
