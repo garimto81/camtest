@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cam-Set Pro | 카메라 세팅 관리 (v2.8 - 하위 호환성 적용)</title>
+    <title>Cam-Set Pro | 카메라 세팅 관리 (v2.9 - ggproduction.net 계정 제한)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -40,7 +40,7 @@
 
         <!-- Header -->
         <header class="flex flex-wrap justify-between items-center mb-8 gap-4">
-            <h1 class="text-3xl font-bold text-white">Cam-Set Pro v2.8</h1>
+            <h1 class="text-3xl font-bold text-white">Cam-Set Pro v2.9</h1>
             <div class="flex items-center gap-2">
                 <div id="auth-container" class="text-right">
                     <!-- Auth status will be injected here -->
@@ -177,7 +177,7 @@
         import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
         // =================================================================================
-        // Firebase Configuration for GitHub Environment
+        // Configuration
         // =================================================================================
         const firebaseConfig = {
             apiKey: "AIzaSyCGL7epqiL0Qg_-Rva6oFmRkl8r5Wri_wQ",
@@ -187,6 +187,7 @@
             messagingSenderId: "348691096048",
             appId: "1:348691096048:web:ac20cffd88f4dae837bd35"
         };
+        const ALLOWED_DOMAIN = "ggproduction.net";
 
         // --- DOM Elements ---
         const app = {
@@ -235,6 +236,7 @@
             comparisonList: new Set(),
             newImageFile: null,
             currentUser: null,
+            isAuthorized: false,
             itemToDelete: null,
             unsubscribe: null,
         };
@@ -258,7 +260,15 @@
             googleProvider = new GoogleAuthProvider();
 
             onAuthStateChanged(auth, user => {
+                if (user && !user.email.endsWith(`@${ALLOWED_DOMAIN}`)) {
+                    showInfoModal("접근 제한", `이 앱은 ${ALLOWED_DOMAIN} 계정 사용자만 이용할 수 있습니다.`);
+                    signOut(auth);
+                    return;
+                }
+                
                 state.currentUser = user;
+                state.isAuthorized = user ? user.email.endsWith(`@${ALLOWED_DOMAIN}`) : false;
+                
                 updateAuthUI(user);
                 loadData();
             });
@@ -276,7 +286,7 @@
                         </div>
                     </div>
                 `;
-                app.buttons.newTest.classList.remove('hidden');
+                app.buttons.newTest.classList.toggle('hidden', !state.isAuthorized);
                 document.getElementById('logoutBtn').addEventListener('click', () => signOut(auth));
             } else {
                 app.containers.auth.innerHTML = `
@@ -318,8 +328,7 @@
 
         function renderDashboard(filter = '') {
             app.containers.gallery.innerHTML = '';
-            const isLoggedIn = !!state.currentUser;
-
+            
             const filteredData = state.allData.filter(item => {
                 const searchTerm = filter.toLowerCase();
                 return (
@@ -332,7 +341,7 @@
 
             if (filteredData.length === 0 && !filter) {
                 app.containers.noData.classList.remove('hidden');
-                app.containers.noData.querySelector('p').textContent = isLoggedIn ? '저장된 테스트 데이터가 없습니다.' : '데이터를 보려면 로그인해주세요.';
+                app.containers.noData.querySelector('p').textContent = state.currentUser ? '저장된 테스트 데이터가 없습니다.' : '데이터를 보려면 로그인해주세요.';
             } else {
                 app.containers.noData.classList.add('hidden');
             }
@@ -348,12 +357,10 @@
                 card.className = `relative bg-gray-800 rounded-lg overflow-hidden shadow-lg card-hover-glow cursor-pointer border-2 ${isSelected ? 'border-blue-500' : 'border-transparent'}`;
                 card.dataset.id = item.id;
                 
-                // ** START: BACKWARD COMPATIBILITY LOGIC **
                 const displayImageUrl = item.imageUrl || item.image_viewer;
                 const displayOwnerName = item.ownerName || '알 수 없는 사용자';
-                // ** END: BACKWARD COMPATIBILITY LOGIC **
 
-                const actionButtons = !isLoggedIn ? '' : `
+                const actionButtons = !state.isAuthorized ? '' : `
                     <div class="absolute bottom-2 right-2 flex gap-2">
                         <button class="edit-btn bg-blue-800/60 hover:bg-blue-700 p-2 rounded-full transition-colors" title="수정하기">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg>
@@ -379,7 +386,7 @@
                 `;
                 
                 card.querySelector('.compare-checkbox').addEventListener('click', (e) => { e.stopPropagation(); toggleComparisonItem(item.id); });
-                if (isLoggedIn) {
+                if (state.isAuthorized) {
                     card.querySelector('.edit-btn').addEventListener('click', (e) => { e.stopPropagation(); openEditForm(item.id); });
                     card.querySelector('.delete-btn').addEventListener('click', (e) => { e.stopPropagation(); openDeleteConfirm(item.id); });
                 }
@@ -447,8 +454,8 @@
 
         async function handleSave(e) {
             e.preventDefault();
-            if (!state.currentUser) {
-                showInfoModal('권한 없음', '로그인한 사용자만 데이터를 저장할 수 있습니다.');
+            if (!state.isAuthorized) {
+                showInfoModal('권한 없음', `이 기능은 ${ALLOWED_DOMAIN} 계정 사용자만 이용할 수 있습니다.`);
                 return;
             }
 
@@ -475,22 +482,17 @@
                     await uploadBytes(imageRef, state.newImageFile);
                     imageUrl = await getDownloadURL(imageRef);
 
-                    // ** START: BACKWARD COMPATIBILITY LOGIC **
                     const oldStoragePath = itemData.storagePath || itemData.storage_path_viewer;
                     if (isEditing && oldStoragePath) {
                         updateStatusMessage('기존 이미지 삭제 중...');
                         const oldImageRef = ref(storage, oldStoragePath);
                         await deleteObject(oldImageRef).catch(e => console.warn("Could not delete old image.", e));
                     }
-                    // ** END: BACKWARD COMPATIBILITY LOGIC **
                 } else {
-                    // ** START: BACKWARD COMPATIBILITY LOGIC **
                     imageUrl = itemData.imageUrl || itemData.image_viewer;
                     storagePath = itemData.storagePath || itemData.storage_path_viewer;
-                    // ** END: BACKWARD COMPATIBILITY LOGIC **
                 }
 
-                // Data is always saved with the NEW field names for gradual migration
                 const dataToSave = {
                     updatedAt: serverTimestamp(),
                     date: app.form.fields.date.value || new Date().toISOString().split('T')[0],
@@ -541,8 +543,8 @@
 
         async function handleDelete() {
             const itemId = state.itemToDelete;
-            if (!itemId || !state.currentUser) {
-                showInfoModal('권한 없음', '로그인한 사용자만 데이터를 삭제할 수 있습니다.');
+            if (!state.isAuthorized) {
+                showInfoModal('권한 없음', `이 기능은 ${ALLOWED_DOMAIN} 계정 사용자만 이용할 수 있습니다.`);
                 return;
             }
 
@@ -553,14 +555,12 @@
                 const itemToDelete = state.allData.find(i => i.id === itemId);
                 if (!itemToDelete) throw new Error('삭제할 항목을 찾지 못했습니다.');
                 
-                // ** START: BACKWARD COMPATIBILITY LOGIC **
                 const storagePathToDelete = itemToDelete.storagePath || itemToDelete.storage_path_viewer;
                 if (storagePathToDelete) {
                     updateStatusMessage('이미지 파일 삭제 중...');
                     const imageRef = ref(storage, storagePathToDelete);
                     await deleteObject(imageRef).catch(e => console.warn("Image delete failed:", e));
                 }
-                // ** END: BACKWARD COMPATIBILITY LOGIC **
                 
                 updateStatusMessage('데이터베이스에서 삭제 중...');
                 const collectionPath = "camera_tests";
@@ -637,8 +637,8 @@
 
         // --- Event Listeners ---
         app.buttons.newTest.addEventListener('click', () => {
-            if (!state.currentUser) {
-                showInfoModal('권한 없음', '로그인한 사용자만 새 테스트를 추가할 수 있습니다.');
+            if (!state.isAuthorized) {
+                showInfoModal('권한 없음', `이 기능은 ${ALLOWED_DOMAIN} 계정 사용자만 이용할 수 있습니다.`);
                 return;
             }
             app.form.formElement.reset();
