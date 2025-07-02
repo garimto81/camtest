@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cam-Set Pro | 카메라 세팅 관리 (v2.5 - 동적 설정 복원)</title>
+    <title>Cam-Set Pro | 카메라 세팅 관리 (v2.6 - GitHub용)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -40,7 +40,7 @@
 
         <!-- Header -->
         <header class="flex flex-wrap justify-between items-center mb-8 gap-4">
-            <h1 class="text-3xl font-bold text-white">Cam-Set Pro v2.5</h1>
+            <h1 class="text-3xl font-bold text-white">Cam-Set Pro v2.6</h1>
             <div class="flex items-center gap-2">
                 <div id="auth-container" class="text-right">
                     <!-- Auth status will be injected here -->
@@ -170,33 +170,23 @@
 
     <!-- Firebase SDK -->
     <script type="module">
-        // Firebase SDKs - Upgraded to a more recent version
+        // Firebase SDKs
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
         // =================================================================================
-        // Debug Mode
+        // Firebase Configuration for GitHub Environment
         // =================================================================================
-        const DEBUG = true; // Set to true to see detailed logs in the console
-        const logger = (...args) => {
-            if (DEBUG) {
-                console.log('%c[DEBUG]', 'color: #3b82f6; font-weight: bold;', ...args);
-            }
+        const firebaseConfig = {
+            apiKey: "AIzaSyCGL7epqiL0Qg_-Rva6oFmRkl8r5Wri_wQ",
+            authDomain: "camtest-6267c.firebaseapp.com",
+            projectId: "camtest-6267c",
+            storageBucket: "camtest-6267c.appspot.com",
+            messagingSenderId: "348691096048",
+            appId: "1:348691096048:web:ac20cffd88f4dae837bd35"
         };
-
-        // =================================================================================
-        // Canvas Environment Integration
-        // =================================================================================
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-cam-set-pro';
-        let firebaseConfig;
-        try {
-            firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-        } catch (e) {
-            console.error("Firebase config is not valid JSON:", __firebase_config);
-            firebaseConfig = null;
-        }
 
         // --- DOM Elements ---
         const app = {
@@ -245,64 +235,36 @@
             comparisonList: new Set(),
             newImageFile: null,
             currentUser: null,
-            userId: null,
             itemToDelete: null,
             unsubscribe: null,
-            isAuthReady: false,
         };
         
         // --- Firebase Globals ---
-        let fbApp, auth, db, storage;
+        let fbApp, auth, db, storage, googleProvider;
         
         // --- Core Application Functions ---
         
         /**
          * Initializes Firebase and sets up authentication.
          */
-        async function initializeAndAuth() {
-            logger("Initializing Firebase...");
-            if (!firebaseConfig) {
+        function initializeAndAuth() {
+            if (!firebaseConfig?.apiKey) {
                 showInfoModal("설정 오류", "Firebase 설정이 올바르지 않아 앱을 시작할 수 없습니다.");
                 app.containers.loading.classList.add('hidden');
-                console.error("Firebase config is missing or invalid.");
                 return;
             }
-            logger("Firebase config found.", firebaseConfig);
 
             fbApp = initializeApp(firebaseConfig);
             auth = getAuth(fbApp);
             db = getFirestore(fbApp);
             storage = getStorage(fbApp);
-            logger("Firebase services initialized.");
+            googleProvider = new GoogleAuthProvider();
 
             onAuthStateChanged(auth, user => {
-                logger("Auth state changed. User:", user);
                 state.currentUser = user;
-                state.userId = user ? user.uid : `anonymous-${crypto.randomUUID()}`;
-                
-                if (!state.isAuthReady) {
-                    state.isAuthReady = true;
-                }
-
                 updateAuthUI(user);
-                loadData(); // Load data on every auth change
+                loadData();
             });
-
-            try {
-                const authToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-                if (authToken) {
-                    logger("Attempting to sign in with custom token...");
-                    await signInWithCustomToken(auth, authToken);
-                    logger("Sign in with custom token successful.");
-                } else {
-                    logger("No custom token found, signing in anonymously...");
-                    await signInAnonymously(auth);
-                    logger("Sign in anonymously successful.");
-                }
-            } catch (error) {
-                console.error("Authentication failed:", error);
-                showInfoModal("인증 실패", `로그인 중 오류가 발생했습니다: ${error.message}`);
-            }
         }
 
         /**
@@ -310,28 +272,32 @@
          * @param {object|null} user - The current Firebase user object.
          */
         function updateAuthUI(user) {
-            const isAnonymous = !user || user.isAnonymous;
-            logger(`Updating Auth UI. User is ${isAnonymous ? 'Anonymous' : 'Logged In'}.`);
-            
-            if (!isAnonymous) {
+            app.containers.auth.innerHTML = ''; // Clear previous auth UI
+            if (user) {
+                // User is signed in
                 app.containers.auth.innerHTML = `
                     <div class="flex items-center">
                         <img src="${user.photoURL || `https://placehold.co/32x32/374151/9ca3af?text=${user.displayName?.[0] || '사'}`}" alt="${user.displayName || '사용자'}" class="w-8 h-8 rounded-full mr-2">
                         <div>
                             <p class="text-sm font-semibold">${user.displayName || '사용자'}</p>
-                            <p class="text-xs text-gray-400 truncate max-w-[100px]" title="사용자 ID: ${state.userId}">ID: ${state.userId}</p>
+                            <button id="logoutBtn" class="text-xs text-blue-400 hover:underline">로그아웃</button>
                         </div>
                     </div>
                 `;
                 app.buttons.newTest.classList.remove('hidden');
+                document.getElementById('logoutBtn').addEventListener('click', () => signOut(auth));
             } else {
-                 app.containers.auth.innerHTML = `
-                    <div class="text-right">
-                        <p class="text-sm font-semibold">익명 사용자</p>
-                        <p class="text-xs text-gray-400 truncate max-w-[150px]" title="사용자 ID: ${state.userId}">ID: ${state.userId}</p>
-                    </div>
+                // User is signed out
+                app.containers.auth.innerHTML = `
+                    <button id="loginBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Google 계정으로 로그인</button>
                 `;
                 app.buttons.newTest.classList.add('hidden');
+                document.getElementById('loginBtn').addEventListener('click', () => {
+                    signInWithPopup(auth, googleProvider).catch(error => {
+                        console.error("Login failed:", error);
+                        showInfoModal("로그인 실패", `로그인 중 오류가 발생했습니다: ${error.message}`);
+                    });
+                });
             }
         }
 
@@ -339,24 +305,15 @@
          * Loads data from Firestore in real-time.
          */
         function loadData() {
-            if (!state.isAuthReady || !db) {
-                logger("loadData aborted: Auth not ready or DB not initialized.");
-                return;
-            }
-            if (state.unsubscribe) {
-                logger("Detaching previous Firestore listener.");
-                state.unsubscribe();
-            }
+            if (state.unsubscribe) state.unsubscribe();
 
             app.containers.loading.classList.remove('hidden');
             app.containers.gallery.innerHTML = '';
             
-            const collectionPath = `artifacts/${appId}/public/data/camera_tests`;
-            logger("Attaching Firestore listener to collection:", collectionPath);
+            const collectionPath = "camera_tests"; // Fixed collection path for GitHub
             const testsCollection = collection(db, collectionPath);
             
             state.unsubscribe = onSnapshot(testsCollection, (querySnapshot) => {
-                logger(`Firestore snapshot received. Found ${querySnapshot.size} documents.`);
                 state.allData = [];
                 querySnapshot.forEach((doc) => {
                     state.allData.push({ id: doc.id, ...doc.data() });
@@ -365,23 +322,18 @@
                 app.containers.loading.classList.add('hidden');
                 app.containers.noData.classList.toggle('hidden', state.allData.length > 0);
             }, (error) => {
-                if (auth.currentUser) {
-                    console.error("Error loading data from Firestore: ", error);
-                    showInfoModal("데이터 로딩 오류", `데이터를 불러오는 중 오류가 발생했습니다: ${error.message}`);
-                } else {
-                    logger("Initial permission error before auth completion. This is expected.");
-                }
+                console.error("Error loading data from Firestore: ", error);
+                showInfoModal("데이터 로딩 오류", `데이터를 불러오는 중 오류가 발생했습니다: ${error.message}`);
                 app.containers.loading.classList.add('hidden');
             });
         }
 
         /**
          * Renders the main dashboard view with gallery cards.
-         * @param {string} [filter=''] - A search term to filter the data.
          */
         function renderDashboard(filter = '') {
             app.containers.gallery.innerHTML = '';
-            const isAnonymous = !state.currentUser || state.currentUser.isAnonymous;
+            const isLoggedIn = !!state.currentUser;
 
             const filteredData = state.allData.filter(item => {
                 const searchTerm = filter.toLowerCase();
@@ -393,9 +345,15 @@
                 );
             }).sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
 
-            if (filteredData.length === 0) {
-                const message = state.allData.length > 0 ? "검색 결과가 없습니다." : "저장된 데이터가 없습니다.";
-                app.containers.gallery.innerHTML = `<p class="col-span-full text-center text-gray-400">${message}</p>`;
+            if (filteredData.length === 0 && !filter) {
+                app.containers.noData.classList.remove('hidden');
+                app.containers.noData.querySelector('p').textContent = isLoggedIn ? '저장된 테스트 데이터가 없습니다.' : '데이터를 보려면 로그인해주세요.';
+            } else {
+                app.containers.noData.classList.add('hidden');
+            }
+            
+            if (filteredData.length === 0 && filter) {
+                app.containers.gallery.innerHTML = `<p class="col-span-full text-center text-gray-400">검색 결과가 없습니다.</p>`;
                 return;
             }
 
@@ -405,7 +363,7 @@
                 card.className = `relative bg-gray-800 rounded-lg overflow-hidden shadow-lg card-hover-glow cursor-pointer border-2 ${isSelected ? 'border-blue-500' : 'border-transparent'}`;
                 card.dataset.id = item.id;
                 
-                const actionButtons = isAnonymous ? '' : `
+                const actionButtons = !isLoggedIn ? '' : `
                     <div class="absolute bottom-2 right-2 flex gap-2">
                         <button class="edit-btn bg-blue-800/60 hover:bg-blue-700 p-2 rounded-full transition-colors" title="수정하기">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg>
@@ -431,7 +389,7 @@
                 `;
                 
                 card.querySelector('.compare-checkbox').addEventListener('click', (e) => { e.stopPropagation(); toggleComparisonItem(item.id); });
-                if (!isAnonymous) {
+                if (isLoggedIn) {
                     card.querySelector('.edit-btn').addEventListener('click', (e) => { e.stopPropagation(); openEditForm(item.id); });
                     card.querySelector('.delete-btn').addEventListener('click', (e) => { e.stopPropagation(); openDeleteConfirm(item.id); });
                 }
@@ -455,11 +413,9 @@
                 checkbox.checked = true;
             }
             app.buttons.compare.disabled = state.comparisonList.size === 0;
-            logger("Comparison list updated:", Array.from(state.comparisonList));
         }
 
         function switchView(viewName) {
-            logger(`Switching view to: ${viewName}`);
             Object.values(app.views).forEach(view => view.classList.add('hidden'));
             if (app.views[viewName]) {
                 app.views[viewName].classList.remove('hidden');
@@ -469,18 +425,15 @@
         function handleImageUpload(e) {
             const file = e.target.files[0];
             if (!file) return;
-            logger("New image selected for upload:", file);
             state.newImageFile = file;
             app.form.previewImage.src = URL.createObjectURL(file);
             app.form.imagePreviewContainer.classList.remove('hidden');
         }
 
         function openEditForm(itemId) {
-            logger(`Opening edit form for item ID: ${itemId}`);
             const item = state.allData.find(i => i.id === itemId);
             if (!item) {
                 showInfoModal("오류", "수정할 항목을 찾을 수 없습니다.");
-                logger(`Item with ID ${itemId} not found in state.allData.`);
                 return;
             }
             
@@ -503,21 +456,16 @@
 
         async function handleSave(e) {
             e.preventDefault();
-            logger("handleSave triggered.");
-            const isAnonymous = !state.currentUser || state.currentUser.isAnonymous;
-            if (isAnonymous) {
+            if (!state.currentUser) {
                 showInfoModal('권한 없음', '로그인한 사용자만 데이터를 저장할 수 있습니다.');
-                logger("Save aborted: User is anonymous.");
                 return;
             }
 
             const entryId = app.form.entryId.value;
             const isEditing = !!entryId;
-            logger(`Save mode: ${isEditing ? 'Editing' : 'Creating New'}. Entry ID: ${entryId || 'N/A'}`);
 
             if (!isEditing && !state.newImageFile) {
                 showInfoModal('알림', '새 항목을 추가하려면 결과물 이미지를 업로드해야 합니다.');
-                logger("Save aborted: No image file for new entry.");
                 return;
             }
 
@@ -528,24 +476,19 @@
                 const itemData = state.allData.find(i => i.id === entryId) || {};
 
                 if (state.newImageFile) {
-                    logger("New image file found, starting upload process...");
                     updateStatusMessage('새 이미지 업로드 중...');
                     const fileExtension = state.newImageFile.name.slice(state.newImageFile.name.lastIndexOf('.'));
-                    storagePath = `images/${state.userId}/${Date.now()}${fileExtension}`;
-                    logger(`Uploading to Storage path: ${storagePath}`);
+                    storagePath = `images/${state.currentUser.uid}/${Date.now()}${fileExtension}`;
                     const imageRef = ref(storage, storagePath);
                     await uploadBytes(imageRef, state.newImageFile);
                     imageUrl = await getDownloadURL(imageRef);
-                    logger("Image upload successful. URL:", imageUrl);
 
                     if (isEditing && itemData.storagePath) {
-                        logger(`Editing mode: Deleting old image at path: ${itemData.storagePath}`);
                         updateStatusMessage('기존 이미지 삭제 중...');
                         const oldImageRef = ref(storage, itemData.storagePath);
-                        await deleteObject(oldImageRef).catch(e => logger("Old image delete failed (might not exist or permissions issue):", e));
+                        await deleteObject(oldImageRef).catch(e => console.warn("Old image delete failed:", e));
                     }
                 } else {
-                    logger("No new image file. Keeping existing image.");
                     imageUrl = itemData.imageUrl;
                     storagePath = itemData.storagePath;
                 }
@@ -568,30 +511,25 @@
                     imageUrl: imageUrl,
                     storagePath: storagePath
                 };
-                logger("Data prepared for Firestore:", dataToSave);
 
-                const collectionPath = `artifacts/${appId}/public/data/camera_tests`;
-                logger(`Target Firestore collection: ${collectionPath}`);
+                const collectionPath = "camera_tests";
 
                 if (isEditing) {
                     updateStatusMessage('데이터베이스 업데이트 중...');
                     const docRef = doc(db, collectionPath, entryId);
                     await updateDoc(docRef, dataToSave);
-                    logger("Firestore document updated successfully.");
                 } else {
                     updateStatusMessage('데이터베이스에 저장 중...');
-                    dataToSave.ownerId = state.userId;
-                    dataToSave.ownerName = state.currentUser?.displayName || '익명 사용자';
+                    dataToSave.ownerId = state.currentUser.uid;
+                    dataToSave.ownerName = state.currentUser.displayName;
                     dataToSave.createdAt = serverTimestamp();
                     await addDoc(collection(db, collectionPath), dataToSave);
-                    logger("New Firestore document added successfully.");
                 }
 
                 showStatusModal(isEditing ? '수정 완료!' : '저장 완료!', '데이터가 성공적으로 처리되었습니다.', true);
 
             } catch (error) {
                 console.error("Save failed:", error);
-                logger("An error occurred during the save process:", error);
                 showStatusModal('오류 발생', `저장 중 문제가 발생했습니다: ${error.message}`, true);
             }
         }
@@ -601,19 +539,12 @@
             const item = state.allData.find(i => i.id === itemId);
             app.modal.deleteConfirmMessage.textContent = `'${item.title}' 항목을 정말 삭제하시겠습니까? 관련된 모든 데이터와 이미지가 영구적으로 삭제되며, 되돌릴 수 없습니다.`;
             app.modal.deleteConfirm.classList.remove('hidden');
-            logger(`Opened delete confirmation for item ID: ${itemId}`);
         }
 
         async function handleDelete() {
             const itemId = state.itemToDelete;
-            if (!itemId) return;
-            logger(`handleDelete triggered for item ID: ${itemId}`);
-            
-            const isAnonymous = !state.currentUser || state.currentUser.isAnonymous;
-            if (isAnonymous) {
+            if (!itemId || !state.currentUser) {
                 showInfoModal('권한 없음', '로그인한 사용자만 데이터를 삭제할 수 있습니다.');
-                logger("Delete aborted: User is anonymous.");
-                app.modal.deleteConfirm.classList.add('hidden');
                 return;
             }
 
@@ -625,31 +556,24 @@
                 if (!itemToDelete) throw new Error('삭제할 항목을 찾지 못했습니다.');
                 
                 if (itemToDelete.storagePath) {
-                    logger(`Deleting image from Storage at path: ${itemToDelete.storagePath}`);
                     updateStatusMessage('이미지 파일 삭제 중...');
                     const imageRef = ref(storage, itemToDelete.storagePath);
-                    await deleteObject(imageRef).catch(e => logger("Image delete failed (might not exist):", e));
-                } else {
-                    logger("No storagePath found for this item, skipping image deletion.");
+                    await deleteObject(imageRef).catch(e => console.warn("Image delete failed:", e));
                 }
                 
                 updateStatusMessage('데이터베이스에서 삭제 중...');
-                const collectionPath = `artifacts/${appId}/public/data/camera_tests`;
-                logger(`Deleting document from Firestore: ${collectionPath}/${itemId}`);
+                const collectionPath = "camera_tests";
                 await deleteDoc(doc(db, collectionPath, itemId));
-                logger("Firestore document deleted successfully.");
 
                 if(state.comparisonList.has(itemId)) {
                     state.comparisonList.delete(itemId);
                     app.buttons.compare.disabled = state.comparisonList.size === 0;
-                    logger("Item removed from comparison list.");
                 }
 
                 showStatusModal('삭제 성공!', '항목이 성공적으로 삭제되었습니다.', true);
 
             } catch (error) {
                 console.error("Delete failed:", error);
-                logger("An error occurred during the delete process:", error);
                 showStatusModal('삭제 실패', `오류가 발생했습니다: ${error.message}`, true);
             } finally {
                 state.itemToDelete = null;
@@ -688,7 +612,6 @@
                 `;
                 app.containers.comparisonGrid.appendChild(itemDiv);
             });
-            logger("Comparison view rendered with items:", Array.from(state.comparisonList));
         }
 
         function showStatusModal(title, message, isFinished = false) {
@@ -711,8 +634,7 @@
 
         // --- Event Listeners ---
         app.buttons.newTest.addEventListener('click', () => {
-            const isAnonymous = !state.currentUser || state.currentUser.isAnonymous;
-            if (isAnonymous) {
+            if (!state.currentUser) {
                 showInfoModal('권한 없음', '로그인한 사용자만 새 테스트를 추가할 수 있습니다.');
                 return;
             }
