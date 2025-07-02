@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cam-Set Pro | 카메라 세팅 관리 (v2.3 - 익명 사용자 권한 분리)</title>
+    <title>Cam-Set Pro | 카메라 세팅 관리 (v2.5 - 동적 설정 복원)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -40,7 +40,7 @@
 
         <!-- Header -->
         <header class="flex flex-wrap justify-between items-center mb-8 gap-4">
-            <h1 class="text-3xl font-bold text-white">Cam-Set Pro v2.3</h1>
+            <h1 class="text-3xl font-bold text-white">Cam-Set Pro v2.5</h1>
             <div class="flex items-center gap-2">
                 <div id="auth-container" class="text-right">
                     <!-- Auth status will be injected here -->
@@ -187,7 +187,7 @@
         };
 
         // =================================================================================
-        // Canvas Environment Integration: Use provided config and app ID
+        // Canvas Environment Integration
         // =================================================================================
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-cam-set-pro';
         let firebaseConfig;
@@ -197,7 +197,7 @@
             console.error("Firebase config is not valid JSON:", __firebase_config);
             firebaseConfig = null;
         }
-        
+
         // --- DOM Elements ---
         const app = {
             views: { dashboard: document.getElementById('dashboardView'), form: document.getElementById('formView'), comparison: document.getElementById('comparisonView') },
@@ -280,7 +280,6 @@
                 state.currentUser = user;
                 state.userId = user ? user.uid : `anonymous-${crypto.randomUUID()}`;
                 
-                // Only set auth ready after first auth check completes.
                 if (!state.isAuthReady) {
                     state.isAuthReady = true;
                 }
@@ -366,8 +365,6 @@
                 app.containers.loading.classList.add('hidden');
                 app.containers.noData.classList.toggle('hidden', state.allData.length > 0);
             }, (error) => {
-                // This error is expected for anonymous users on first load if rules require auth for reads.
-                // We can ignore it if the user is not yet fully authenticated.
                 if (auth.currentUser) {
                     console.error("Error loading data from Firestore: ", error);
                     showInfoModal("데이터 로딩 오류", `데이터를 불러오는 중 오류가 발생했습니다: ${error.message}`);
