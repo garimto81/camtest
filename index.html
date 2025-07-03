@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cam-Set Pro | 카메라 세팅 관리 (v2.9 - ggproduction.net 계정 제한)</title>
+    <title>Cam-Set Pro | 카메라 세팅 관리 (v2.10 - 전체 화면 비교)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -40,7 +40,7 @@
 
         <!-- Header -->
         <header class="flex flex-wrap justify-between items-center mb-8 gap-4">
-            <h1 class="text-3xl font-bold text-white">Cam-Set Pro v2.9</h1>
+            <h1 class="text-3xl font-bold text-white">Cam-Set Pro v2.10</h1>
             <div class="flex items-center gap-2">
                 <div id="auth-container" class="text-right">
                     <!-- Auth status will be injected here -->
@@ -130,14 +130,8 @@
                 </form>
             </div>
 
-            <!-- Comparison View -->
-            <div id="comparisonView" class="hidden">
-                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-semibold">세팅 비교</h2>
-                    <button id="backToDashboardBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300">돌아가기</button>
-                </div>
-                <div id="comparisonGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-            </div>
+            <!-- Comparison View (Structure will be generated dynamically) -->
+            <div id="comparisonView" class="hidden"></div>
         </main>
     </div>
 
@@ -182,8 +176,8 @@
         const firebaseConfig = {
             apiKey: "AIzaSyCGL7epqiL0Qg_-Rva6oFmRkl8r5Wri_wQ",
             authDomain: "camtest-6267c.firebaseapp.com",
-            projectId: "camtest-6267c",
             storageBucket: "camtest-6267c.firebasestorage.app",
+            projectId: "camtest-6267c",
             messagingSenderId: "348691096048",
             appId: "1:348691096048:web:ac20cffd88f4dae837bd35"
         };
@@ -197,7 +191,7 @@
                 compare: document.getElementById('compareBtn'),
                 cancel: document.getElementById('cancelBtn'),
                 save: document.getElementById('saveBtn'),
-                backToDashboard: document.getElementById('backToDashboardBtn'),
+                // backToDashboard is now dynamically created
                 closeStatusModal: document.getElementById('closeStatusModalBtn'),
                 cancelDelete: document.getElementById('cancelDeleteBtn'),
                 confirmDelete: document.getElementById('confirmDeleteBtn'),
@@ -205,7 +199,7 @@
             },
             containers: {
                 gallery: document.getElementById('gallery'),
-                comparisonGrid: document.getElementById('comparisonGrid'),
+                // comparisonGrid is now dynamically created
                 loading: document.getElementById('loading'),
                 noData: document.getElementById('no-data'),
                 auth: document.getElementById('auth-container'),
@@ -260,14 +254,14 @@
             googleProvider = new GoogleAuthProvider();
 
             onAuthStateChanged(auth, user => {
-                if (user && !user.email.endsWith(`@${ALLOWED_DOMAIN}`)) {
+                if (user && user.email && !user.email.endsWith(`@${ALLOWED_DOMAIN}`)) {
                     showInfoModal("접근 제한", `이 앱은 ${ALLOWED_DOMAIN} 계정 사용자만 이용할 수 있습니다.`);
                     signOut(auth);
                     return;
                 }
                 
                 state.currentUser = user;
-                state.isAuthorized = user ? user.email.endsWith(`@${ALLOWED_DOMAIN}`) : false;
+                state.isAuthorized = user && user.email ? user.email.endsWith(`@${ALLOWED_DOMAIN}`) : false;
                 
                 updateAuthUI(user);
                 loadData();
@@ -582,8 +576,26 @@
         }
         
         function renderComparisonView() {
-            switchView('comparison');
-            app.containers.comparisonGrid.innerHTML = '';
+            const comparisonView = app.views.comparison;
+            // Make the view a fixed, full-screen container
+            comparisonView.className = 'fixed inset-0 bg-gray-900/95 z-50 flex flex-col p-4';
+            comparisonView.innerHTML = `
+                <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                    <h2 class="text-2xl font-semibold text-white">세팅 비교</h2>
+                    <button id="backToDashboardBtnFullscreen" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300">돌아가기</button>
+                </div>
+                <div id="comparisonGridFullscreen" class="flex-grow grid grid-cols-1 md:grid-cols-2 gap-4 min-h-0">
+                    <!-- Comparison items will be injected here -->
+                </div>
+            `;
+
+            const comparisonGrid = document.getElementById('comparisonGridFullscreen');
+            const backBtn = document.getElementById('backToDashboardBtnFullscreen');
+
+            backBtn.addEventListener('click', () => {
+                comparisonView.className = 'hidden'; // Hide the view
+                switchView('dashboard'); // Show the main dashboard
+            });
             
             const fieldsToDisplay = {
                 title: '제목', director: '촬영 감독', date: '날짜', sceneDesc: '장면 설명',
@@ -597,23 +609,28 @@
                 if (!item) return;
 
                 const itemDiv = document.createElement('div');
-                itemDiv.className = 'bg-gray-800 rounded-lg shadow-lg p-4';
+                itemDiv.className = 'bg-gray-800 rounded-lg shadow-lg flex flex-col relative overflow-hidden';
                 
                 const displayImageUrl = item.imageUrl || item.image_viewer;
 
                 const detailsHtml = Object.entries(fieldsToDisplay).map(([key, label]) => {
                     const value = item[key];
                     if (!value) return '';
-                    return `<div class="flex justify-between border-b border-gray-700 py-2"><span class="font-semibold text-gray-400">${label}:</span> <span class="text-right">${value}</span></div>`;
+                    return `<div class="flex justify-between text-sm"><span class="font-semibold text-gray-400">${label}:</span> <span class="text-right">${value}</span></div>`;
                 }).join('');
 
                 itemDiv.innerHTML = `
-                    <img src="${displayImageUrl}" alt="${item.title}" class="w-full h-64 object-cover rounded-md mb-4" onerror="this.onerror=null;this.src='https://placehold.co/600x400/1f2937/9ca3af?text=이미지+오류';">
-                    <div class="space-y-1 text-sm text-gray-300">
-                        ${detailsHtml}
+                    <div class="flex-grow flex items-center justify-center h-full p-4 min-h-0">
+                         <img src="${displayImageUrl}" alt="${item.title}" class="max-w-full max-h-full object-contain">
+                    </div>
+                    <div class="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent">
+                        <h3 class="font-bold text-xl mb-2 text-white">${item.title}</h3>
+                        <div class="space-y-1 text-gray-300 max-h-48 overflow-y-auto pr-2">
+                            ${detailsHtml}
+                        </div>
                     </div>
                 `;
-                app.containers.comparisonGrid.appendChild(itemDiv);
+                comparisonGrid.appendChild(itemDiv);
             });
         }
 
@@ -651,8 +668,7 @@
         });
         
         app.buttons.cancel.addEventListener('click', () => switchView('dashboard'));
-        app.buttons.backToDashboard.addEventListener('click', () => switchView('dashboard'));
-        app.buttons.compare.addEventListener('click', () => { if (state.comparisonList.size > 0) renderComparisonView(); });
+        app.buttons.compare.addEventListener('click', renderComparisonView);
         app.form.imageUpload.addEventListener('change', handleImageUpload);
         app.form.formElement.addEventListener('submit', handleSave);
         app.buttons.closeStatusModal.addEventListener('click', () => {
